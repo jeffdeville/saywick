@@ -1,0 +1,15 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+xcuserdata/
+Config/Local.xcconfig
+.history/
+.serena/
+.env
+.env.*
+*.wav
+*.m4a
+*.mp3
+*.caf
+*.xcresult/

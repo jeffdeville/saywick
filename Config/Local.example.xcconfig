@@ -1,0 +1,5 @@
+// Copy this file to Local.xcconfig and replace the values below.
+// TEAM_ID appears in Xcode > Settings > Accounts > your team.
+DEVELOPMENT_TEAM = TEAM_ID
+BUNDLE_ID_PREFIX = com.yourname.localvoicekeyboard
+APP_GROUP_IDENTIFIER = group.com.yourname.localvoicekeyboard

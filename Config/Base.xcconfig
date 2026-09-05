@@ -1,0 +1,7 @@
+// Safe placeholders. Override these in Config/Local.xcconfig (gitignored).
+BUNDLE_ID_PREFIX = com.example.localvoicekeyboard
+APP_GROUP_IDENTIFIER = group.com.example.localvoicekeyboard
+DEVELOPMENT_TEAM =
+CODE_SIGN_STYLE = Automatic
+
+#include? "Local.xcconfig"
