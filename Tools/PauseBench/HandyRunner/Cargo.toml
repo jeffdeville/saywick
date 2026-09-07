@@ -1,0 +1,13 @@
+[package]
+name = "pause-bench-handy"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+hound = "3.5.1"
+serde_json = "1"
+transcribe-cpp = { version = "=0.2.0", default-features = false, features = ["metal"] }
+transcribe-cpp-sys = "=0.2.0"
+vad-rs = { git = "https://github.com/cjpais/vad-rs", rev = "2a412ed858695b9251f3f5a1a20d95b59fa7c498", default-features = false }
+earshot = "=1.2.2"

@@ -25,7 +25,7 @@ struct HistoryView: View {
                     }
                 }
                 if model.history.entries.isEmpty {
-                    ContentUnavailableView("No recordings yet", systemImage: "waveform", description: Text("Dictate or import audio to compare model outputs."))
+                    ContentUnavailableView("No recordings yet", systemImage: "waveform", description: Text("Dictate or import audio to save and transcribe it on device."))
                 }
                 ForEach(model.history.entries.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search)
                     || $0.runs.contains { $0.rawText.localizedCaseInsensitiveContains(search) || $0.finalText.localizedCaseInsensitiveContains(search) } }) { entry in
@@ -43,7 +43,7 @@ struct HistoryView: View {
                     }
                 }
                 Section("Retention — local, excluded from backups") {
-                    Toggle("Keep audio for comparisons", isOn: $model.history.keepAudio)
+                    Toggle("Keep audio for playback", isOn: $model.history.keepAudio)
                     Picker("Keep unpinned text", selection: $model.history.textDays) {
                         Text("7 days").tag(7); Text("30 days").tag(30); Text("Forever").tag(0)
                     }
@@ -84,8 +84,6 @@ struct HistoryView: View {
 private struct HistoryDetailView: View {
     @Bindable var model: AppModel
     let entryID: UUID
-    @State private var engine: SpeechEngineID = .maiTranscribe2
-    @State private var cloudConfirmation = false
     @State private var deleteAudio = false
     @State private var sharedItems: [Any] = []
     @State private var sharing = false
@@ -107,13 +105,10 @@ private struct HistoryDetailView: View {
                         Button("Delete audio only", role: .destructive) { deleteAudio = true }.disabled(disabled)
                     }
                 }
-                Section("Compare the same audio") {
-                    Picker("Transcription model", selection: $engine) {
-                        ForEach(SpeechEngineID.allCases) { Text($0.displayName).tag($0) }
-                    }
-                    Button("Run selected model") { if engine.isCloud { cloudConfirmation = true } else { run(entry) } }
+                Section("Transcribe audio") {
+                    Button("Transcribe with Parakeet") { run(entry) }
                         .accessibilityIdentifier("runComparison").disabled(disabled || !entry.hasAudio)
-                    Text("Creates a separate run using current cleanup and custom words. MAI Live replays at realtime speed; other models process the file directly. Local engines may require a model download.").font(.caption)
+                    Text("Saves a new on-device transcript using current cleanup and custom words. Earlier transcripts are kept.").font(.caption)
                 }.disabled(disabled)
                 if model.history.isWorking { Button("Cancel operation") { model.history.cancelWork() } }
                 ForEach(entry.runs) { result in
@@ -159,16 +154,13 @@ private struct HistoryDetailView: View {
         }
         .navigationTitle("Recording")
         .sheet(isPresented: $sharing) { ActivityShareView(items: sharedItems) }
-        .confirmationDialog("Send this recording to Microsoft Azure? Azure usage will be billed. Audio also stays on this phone.", isPresented: $cloudConfirmation) {
-            Button("Send audio and transcribe") { if let entry { run(entry) } }
-        }
         .confirmationDialog("Permanently delete audio? Text and comparisons will remain.", isPresented: $deleteAudio) {
             Button("Delete audio", role: .destructive) { if let entry { model.history.delete(entry, audioOnly: true) } }
         }
         .onDisappear { model.history.stopPlayback() }
     }
     private func run(_ entry: TranscriptHistoryEntry) {
-        model.history.compare(entry, engine: engine, cleanup: model.selectedPostProcessorID,
+        model.history.compare(entry, engine: .parakeetStreaming, cleanup: model.selectedPostProcessorID,
             instructions: model.customCleanupInstructions, vocabulary: model.customWordsEnabled ? model.customWordsText : "")
     }
     private func export(_ entry: TranscriptHistoryEntry, markdown: Bool) {

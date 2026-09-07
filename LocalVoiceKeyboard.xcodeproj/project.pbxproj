@@ -8,18 +8,29 @@
 
 /* Begin PBXBuildFile section */
 		070C1FF7FAB9E1601A013A8D /* SharedContainerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFB9DD2854EC941D0FD6556 /* SharedContainerStore.swift */; };
+		0CC2F258C85EC949A07A6A78 /* ParakeetDeviceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 684FC3FD5ABAD45C7A645A0C /* ParakeetDeviceTests.swift */; };
+		14158754D162ADF52EEB4782 /* MicrophoneSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10668027699F7EE41FC3A84E /* MicrophoneSessionTests.swift */; };
 		17A9F745CBBE4E208388224D /* SaywickActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24359AF657262E1272CED75 /* SaywickActivityAttributes.swift */; };
+		1D05A2672B3C26CE06B347EB /* MeetingRecordingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1666A5BD8467FEF581B8403B /* MeetingRecordingTests.swift */; };
 		1DD567914466592C2DC22D2C /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A63E669DBA875ACF94AF0347 /* AppModel.swift */; };
 		1F55595D4FC78BA27DD63183 /* SaywickActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24359AF657262E1272CED75 /* SaywickActivityAttributes.swift */; };
+		1F55FB21495EA9918DDBE8E9 /* StopSaywickRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0186AB2B51E0412EC2AC97B0 /* StopSaywickRecording.swift */; };
+		209BF85FFA39BAC02359F397 /* ParakeetModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C977FD7DD5A86D74021B093C /* ParakeetModelStore.swift */; };
+		23DA37C5173D154AF30C489E /* ActivationDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAB1C8DDD9AF0CEF03A5D64C /* ActivationDiagnostics.swift */; };
 		23E7DCF59E81B8FD15972FAE /* VoiceKeyboardCore in Frameworks */ = {isa = PBXBuildFile; productRef = D15228EBD676D4068BBB81CD /* VoiceKeyboardCore */; };
 		2766FD32F9D27813E9CE3A34 /* LocalVoiceKeyboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 423A1BEFE01B282A932C34FD /* LocalVoiceKeyboardApp.swift */; };
+		27F664AB3E806243C0CBF347 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EC1322D5448A00A21CB2B14 /* KeyboardViewController.swift */; };
+		28B16608A7B7507FD517FC37 /* ParakeetSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2938A16A02555A1EBA32957F /* ParakeetSpeechEngine.swift */; };
 		292A23A336004CFBCBB9A8E5 /* SaywickStatusWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDC3BB93A1446E32DFD18AFF /* SaywickStatusWidget.swift */; };
-		2FC1B0BE637C178D8B07AFE0 /* MAIVoiceLiveEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0E4912561C2E30AE45361F /* MAIVoiceLiveEngine.swift */; };
-		3151C534667EDE188A6F2583 /* AzureCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB31ABB578544BF7888D47D2 /* AzureCredentialStore.swift */; };
+		2A2115D4D4335702C1C51E06 /* ContactWordsPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38AA830E18686A3328246E89 /* ContactWordsPicker.swift */; };
 		343A91BB25887DB49FC67882 /* LiveSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32DC307396E107EBAE888CC2 /* LiveSpeechEngine.swift */; };
-		38DB1884EBE1F7529E84BF35 /* MoonshineSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1195A215E258D73AF08DD39B /* MoonshineSpeechEngine.swift */; };
+		42C0C1D31739D1B3F47B07AF /* AudioCaptureTapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F9B530E91C5CD159422B6C4 /* AudioCaptureTapTests.swift */; };
 		42C0D4CF1D34230AF6185719 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EC1322D5448A00A21CB2B14 /* KeyboardViewController.swift */; };
+		4421FBF44857387A9551AB0F /* MeetingRecordingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC98470737AC49A9142FE85 /* MeetingRecordingEngine.swift */; };
+		45DD58648652E081DF44F7B3 /* MicrophoneCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A7A98734CC210176794E68 /* MicrophoneCapture.swift */; };
 		49E9B7725F8AE49BBF434D8D /* AudioArchiveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C097089A6D12A9A00ADBA05B /* AudioArchiveTests.swift */; };
+		4D165FB9CB82F2504DA01D56 /* AudioCaptureTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDA4809DB9A06E5D32600CA6 /* AudioCaptureTap.swift */; };
+		4D18C4A49C0CF282F1EB7935 /* Parakeet-Licenses.txt in Resources */ = {isa = PBXBuildFile; fileRef = 704AC1AF2EF6CE9A185772E1 /* Parakeet-Licenses.txt */; };
 		50E49238DDC8AD63B5876D67 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16F48D0C066B778C0A1EBB5B /* ContentView.swift */; };
 		5124B18649C07B3A22B4FCA2 /* SharedAudioInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355C6F297E1E8BB9AA72C488 /* SharedAudioInbox.swift */; };
 		5B18FC9BD01C6B7F2982CF4C /* VoiceKeyboardCore in Frameworks */ = {isa = PBXBuildFile; productRef = ADD1935DA754A8AA5761ECFF /* VoiceKeyboardCore */; };
@@ -27,20 +38,27 @@
 		61AA3CC3A00DED11C9B771C7 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF09A0C5E0CA1FC1C461FBFF /* ShareViewController.swift */; };
 		651004C87D822D55D97A5105 /* LocalVoice.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BE99E44F562EA8A68DE1AC4D /* LocalVoice.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		66FC9039525129C9F3212D4B /* SharedAudioInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355C6F297E1E8BB9AA72C488 /* SharedAudioInbox.swift */; };
+		6706EF0EC463D43A1A631470 /* BackgroundRecordingDeviceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 199849C2AF9553890743F106 /* BackgroundRecordingDeviceTests.swift */; };
 		71BA49CA6EFF0834F4F19990 /* AudioArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2002FD6FF9430DA963512EE /* AudioArchive.swift */; };
+		760162998AD5E373B477DAA9 /* SharedContainerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFB9DD2854EC941D0FD6556 /* SharedContainerStore.swift */; };
+		773938CFEAD6E49DD822AE4D /* ParakeetWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFFA53ED067B89DC8C92E84A /* ParakeetWorker.swift */; };
 		8275C244C9A0569950349B9B /* RecordingActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22B13E1441278C5EF0779F47 /* RecordingActivity.swift */; };
+		82DA62B4717B2E5D679DF167 /* TranscriptPostProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812563D6E2FCC95341505E58 /* TranscriptPostProcessorTests.swift */; };
+		86B6B99D9FC3D4C395A09E16 /* TypingFallbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 539F6A5C62F87EE13BD3EB27 /* TypingFallbackTests.swift */; };
 		881D5343202FC130F7F0D8D3 /* SaywickShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE122408C8E17FD744FA4E57 /* SaywickShortcuts.swift */; };
 		8E10096494BA48F5BFB7DCD7 /* SaywickShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 425316548774BDB922FA1438 /* SaywickShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		94D52ADC7006AE5BA2F1AF69 /* AudioFileTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AA3949B1A9D890342FFC152 /* AudioFileTranscriber.swift */; };
 		99093EA3411FE3634DBEEC98 /* AudioBufferConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD68DE3033ED8394CD2AD1F0 /* AudioBufferConverter.swift */; };
-		9DB8EFE3EC4B80DF1ECDC3D5 /* AppleSpeechAnalyzerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42172324AD91A77C5E6E387B /* AppleSpeechAnalyzerEngine.swift */; };
-		A16D77A31798FBDA1A46C7D0 /* MAISpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF698AFFB4FDEA44437C6506 /* MAISpeechEngine.swift */; };
+		9AA084E0B0CB5EF5007E89FB /* StopSaywickRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0186AB2B51E0412EC2AC97B0 /* StopSaywickRecording.swift */; };
+		B54D5E208DDC5BBFBAC701DE /* KeyboardHandoffDeviceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E51046EC6AFC5FBD2BD9D7 /* KeyboardHandoffDeviceTests.swift */; };
+		B631BBA6A6E6BA5E9928C5B5 /* StopSaywickRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0186AB2B51E0412EC2AC97B0 /* StopSaywickRecording.swift */; };
 		BDCA94084357E2D17993FE0D /* SaywickActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24359AF657262E1272CED75 /* SaywickActivityAttributes.swift */; };
+		BE8C8B3E860E6AEAD9224972 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6FFDEC692C39DA0A5B8933F6 /* Assets.xcassets */; };
 		C12CB502980D067A2CBD3AA9 /* SharedAudioInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355C6F297E1E8BB9AA72C488 /* SharedAudioInbox.swift */; };
 		C1CB30EE5AB2A6071D0F5D45 /* SimulatorSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB6CB5EA2C7907F47149BFF /* SimulatorSpeechEngine.swift */; };
 		CA43F52962D0BA6D9A86BAD7 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 758EAF0B3DA0081B8DC21E90 /* HistoryView.swift */; };
 		D421BF6B529B93158F38774F /* SharedContainerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFB9DD2854EC941D0FD6556 /* SharedContainerStore.swift */; };
-		DA9D08B5C2B7CA7A8BD9973F /* MoonshineVoice in Frameworks */ = {isa = PBXBuildFile; productRef = 9399BDD74AE5666DE389AE47 /* MoonshineVoice */; };
+		DA9D08B5C2B7CA7A8BD9973F /* TranscribeCpp in Frameworks */ = {isa = PBXBuildFile; productRef = 9A89C71BAED711D94B9162A7 /* TranscribeCpp */; };
 		DBF451F3F56E68115655EFBB /* HistoryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CB38139D1AA0D3F58532314 /* HistoryModel.swift */; };
 		E61F2ED22F046885B833256A /* LocalVoiceKeyboardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D533136756B5A1E77668B7 /* LocalVoiceKeyboardUITests.swift */; };
 		F63B537D03A0C9351FBD1969 /* SaywickStatus.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 357D0D7F51DDEDA52F06CED6 /* SaywickStatus.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -101,40 +119,55 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0186AB2B51E0412EC2AC97B0 /* StopSaywickRecording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopSaywickRecording.swift; sourceTree = "<group>"; };
+		01A7A98734CC210176794E68 /* MicrophoneCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophoneCapture.swift; sourceTree = "<group>"; };
 		0CB38139D1AA0D3F58532314 /* HistoryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryModel.swift; sourceTree = "<group>"; };
-		1195A215E258D73AF08DD39B /* MoonshineSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoonshineSpeechEngine.swift; sourceTree = "<group>"; };
+		10668027699F7EE41FC3A84E /* MicrophoneSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophoneSessionTests.swift; sourceTree = "<group>"; };
+		1666A5BD8467FEF581B8403B /* MeetingRecordingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingRecordingTests.swift; sourceTree = "<group>"; };
 		16F48D0C066B778C0A1EBB5B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		199849C2AF9553890743F106 /* BackgroundRecordingDeviceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRecordingDeviceTests.swift; sourceTree = "<group>"; };
 		1BB5955F4FF7F4A75BADEFAF /* TranscriptPostProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptPostProcessor.swift; sourceTree = "<group>"; };
 		22B13E1441278C5EF0779F47 /* RecordingActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingActivity.swift; sourceTree = "<group>"; };
+		25E51046EC6AFC5FBD2BD9D7 /* KeyboardHandoffDeviceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHandoffDeviceTests.swift; sourceTree = "<group>"; };
+		2938A16A02555A1EBA32957F /* ParakeetSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetSpeechEngine.swift; sourceTree = "<group>"; };
 		32DC307396E107EBAE888CC2 /* LiveSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveSpeechEngine.swift; sourceTree = "<group>"; };
 		355C6F297E1E8BB9AA72C488 /* SharedAudioInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAudioInbox.swift; sourceTree = "<group>"; };
 		357D0D7F51DDEDA52F06CED6 /* SaywickStatus.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = SaywickStatus.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		38AA830E18686A3328246E89 /* ContactWordsPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactWordsPicker.swift; sourceTree = "<group>"; };
 		3EC1322D5448A00A21CB2B14 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
-		42172324AD91A77C5E6E387B /* AppleSpeechAnalyzerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSpeechAnalyzerEngine.swift; sourceTree = "<group>"; };
+		3F9B530E91C5CD159422B6C4 /* AudioCaptureTapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureTapTests.swift; sourceTree = "<group>"; };
 		423A1BEFE01B282A932C34FD /* LocalVoiceKeyboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalVoiceKeyboardApp.swift; sourceTree = "<group>"; };
 		425316548774BDB922FA1438 /* SaywickShare.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = SaywickShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		42D533136756B5A1E77668B7 /* LocalVoiceKeyboardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalVoiceKeyboardUITests.swift; sourceTree = "<group>"; };
 		464B1A272E043D1D8D291747 /* SaywickAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SaywickAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AB6CB5EA2C7907F47149BFF /* SimulatorSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorSpeechEngine.swift; sourceTree = "<group>"; };
 		4FFB9DD2854EC941D0FD6556 /* SharedContainerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedContainerStore.swift; sourceTree = "<group>"; };
+		539F6A5C62F87EE13BD3EB27 /* TypingFallbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypingFallbackTests.swift; sourceTree = "<group>"; };
 		53D6E2EA1EED24AC7088DEC1 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
-		5C0E4912561C2E30AE45361F /* MAIVoiceLiveEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MAIVoiceLiveEngine.swift; sourceTree = "<group>"; };
+		684FC3FD5ABAD45C7A645A0C /* ParakeetDeviceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetDeviceTests.swift; sourceTree = "<group>"; };
 		6AA3949B1A9D890342FFC152 /* AudioFileTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFileTranscriber.swift; sourceTree = "<group>"; };
+		6FFDEC692C39DA0A5B8933F6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		704AC1AF2EF6CE9A185772E1 /* Parakeet-Licenses.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Parakeet-Licenses.txt"; sourceTree = "<group>"; };
+		714B693063382E4084306A08 /* SwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SwiftPackage; path = .build/Parakeet/SwiftPackage; sourceTree = SOURCE_ROOT; };
 		758EAF0B3DA0081B8DC21E90 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		812563D6E2FCC95341505E58 /* TranscriptPostProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptPostProcessorTests.swift; sourceTree = "<group>"; };
 		911EA690314F97FEDF3630FA /* LocalVoiceKeyboard.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LocalVoiceKeyboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9CEA115C0BBB7DE079C4F0AE /* ios_kb */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ios_kb; path = .; sourceTree = SOURCE_ROOT; };
 		A63E669DBA875ACF94AF0347 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		BE99E44F562EA8A68DE1AC4D /* LocalVoice.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = LocalVoice.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BF09A0C5E0CA1FC1C461FBFF /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		C097089A6D12A9A00ADBA05B /* AudioArchiveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioArchiveTests.swift; sourceTree = "<group>"; };
+		C977FD7DD5A86D74021B093C /* ParakeetModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetModelStore.swift; sourceTree = "<group>"; };
 		CD68DE3033ED8394CD2AD1F0 /* AudioBufferConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBufferConverter.swift; sourceTree = "<group>"; };
-		CF698AFFB4FDEA44437C6506 /* MAISpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MAISpeechEngine.swift; sourceTree = "<group>"; };
 		D24359AF657262E1272CED75 /* SaywickActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaywickActivityAttributes.swift; sourceTree = "<group>"; };
+		DFFA53ED067B89DC8C92E84A /* ParakeetWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetWorker.swift; sourceTree = "<group>"; };
 		E2002FD6FF9430DA963512EE /* AudioArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioArchive.swift; sourceTree = "<group>"; };
-		EB31ABB578544BF7888D47D2 /* AzureCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureCredentialStore.swift; sourceTree = "<group>"; };
 		ECD3D267257E9E9F2AA68585 /* LocalVoiceKeyboardUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LocalVoiceKeyboardUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EDA4809DB9A06E5D32600CA6 /* AudioCaptureTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureTap.swift; sourceTree = "<group>"; };
 		EDC3BB93A1446E32DFD18AFF /* SaywickStatusWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaywickStatusWidget.swift; sourceTree = "<group>"; };
 		EE122408C8E17FD744FA4E57 /* SaywickShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaywickShortcuts.swift; sourceTree = "<group>"; };
+		FAB1C8DDD9AF0CEF03A5D64C /* ActivationDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivationDiagnostics.swift; sourceTree = "<group>"; };
+		FCC98470737AC49A9142FE85 /* MeetingRecordingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingRecordingEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -143,7 +176,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5B18FC9BD01C6B7F2982CF4C /* VoiceKeyboardCore in Frameworks */,
-				DA9D08B5C2B7CA7A8BD9973F /* MoonshineVoice in Frameworks */,
+				DA9D08B5C2B7CA7A8BD9973F /* TranscribeCpp in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -178,6 +211,8 @@
 		2A11066B6235AFE45F4EB8FA /* LocalVoiceKeyboardUITests */ = {
 			isa = PBXGroup;
 			children = (
+				199849C2AF9553890743F106 /* BackgroundRecordingDeviceTests.swift */,
+				25E51046EC6AFC5FBD2BD9D7 /* KeyboardHandoffDeviceTests.swift */,
 				42D533136756B5A1E77668B7 /* LocalVoiceKeyboardUITests.swift */,
 			);
 			name = LocalVoiceKeyboardUITests;
@@ -188,6 +223,7 @@
 			isa = PBXGroup;
 			children = (
 				9CEA115C0BBB7DE079C4F0AE /* ios_kb */,
+				714B693063382E4084306A08 /* SwiftPackage */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
@@ -195,15 +231,16 @@
 		3A8F06F6670C549F6994B881 /* Engines */ = {
 			isa = PBXGroup;
 			children = (
-				42172324AD91A77C5E6E387B /* AppleSpeechAnalyzerEngine.swift */,
 				E2002FD6FF9430DA963512EE /* AudioArchive.swift */,
 				CD68DE3033ED8394CD2AD1F0 /* AudioBufferConverter.swift */,
+				EDA4809DB9A06E5D32600CA6 /* AudioCaptureTap.swift */,
 				6AA3949B1A9D890342FFC152 /* AudioFileTranscriber.swift */,
-				EB31ABB578544BF7888D47D2 /* AzureCredentialStore.swift */,
 				32DC307396E107EBAE888CC2 /* LiveSpeechEngine.swift */,
-				CF698AFFB4FDEA44437C6506 /* MAISpeechEngine.swift */,
-				5C0E4912561C2E30AE45361F /* MAIVoiceLiveEngine.swift */,
-				1195A215E258D73AF08DD39B /* MoonshineSpeechEngine.swift */,
+				FCC98470737AC49A9142FE85 /* MeetingRecordingEngine.swift */,
+				01A7A98734CC210176794E68 /* MicrophoneCapture.swift */,
+				C977FD7DD5A86D74021B093C /* ParakeetModelStore.swift */,
+				2938A16A02555A1EBA32957F /* ParakeetSpeechEngine.swift */,
+				DFFA53ED067B89DC8C92E84A /* ParakeetWorker.swift */,
 				4AB6CB5EA2C7907F47149BFF /* SimulatorSpeechEngine.swift */,
 			);
 			path = Engines;
@@ -215,6 +252,7 @@
 				D24359AF657262E1272CED75 /* SaywickActivityAttributes.swift */,
 				355C6F297E1E8BB9AA72C488 /* SharedAudioInbox.swift */,
 				4FFB9DD2854EC941D0FD6556 /* SharedContainerStore.swift */,
+				0186AB2B51E0412EC2AC97B0 /* StopSaywickRecording.swift */,
 			);
 			name = Shared;
 			path = Sources/Shared;
@@ -231,6 +269,14 @@
 				357D0D7F51DDEDA52F06CED6 /* SaywickStatus.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		48227AB5BE4F7D9C8FEBDFC3 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				704AC1AF2EF6CE9A185772E1 /* Parakeet-Licenses.txt */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		50477A53F563DDE66FC9BC3E /* ShareExtension */ = {
@@ -253,13 +299,16 @@
 		98C65C627ED84FA9471DBB7B /* App */ = {
 			isa = PBXGroup;
 			children = (
+				FAB1C8DDD9AF0CEF03A5D64C /* ActivationDiagnostics.swift */,
 				A63E669DBA875ACF94AF0347 /* AppModel.swift */,
+				6FFDEC692C39DA0A5B8933F6 /* Assets.xcassets */,
 				0CB38139D1AA0D3F58532314 /* HistoryModel.swift */,
 				423A1BEFE01B282A932C34FD /* LocalVoiceKeyboardApp.swift */,
 				22B13E1441278C5EF0779F47 /* RecordingActivity.swift */,
 				EE122408C8E17FD744FA4E57 /* SaywickShortcuts.swift */,
 				3A8F06F6670C549F6994B881 /* Engines */,
 				5FCE9DB949D586ADFC909E9C /* PostProcessing */,
+				48227AB5BE4F7D9C8FEBDFC3 /* Resources */,
 				E5800C7270DA98FC0F5A9160 /* Views */,
 			);
 			name = App;
@@ -278,6 +327,7 @@
 		E5800C7270DA98FC0F5A9160 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				38AA830E18686A3328246E89 /* ContactWordsPicker.swift */,
 				16F48D0C066B778C0A1EBB5B /* ContentView.swift */,
 				758EAF0B3DA0081B8DC21E90 /* HistoryView.swift */,
 			);
@@ -304,6 +354,12 @@
 			isa = PBXGroup;
 			children = (
 				C097089A6D12A9A00ADBA05B /* AudioArchiveTests.swift */,
+				3F9B530E91C5CD159422B6C4 /* AudioCaptureTapTests.swift */,
+				1666A5BD8467FEF581B8403B /* MeetingRecordingTests.swift */,
+				10668027699F7EE41FC3A84E /* MicrophoneSessionTests.swift */,
+				684FC3FD5ABAD45C7A645A0C /* ParakeetDeviceTests.swift */,
+				812563D6E2FCC95341505E58 /* TranscriptPostProcessorTests.swift */,
+				539F6A5C62F87EE13BD3EB27 /* TypingFallbackTests.swift */,
 			);
 			name = SaywickAppTests;
 			path = Tests/SaywickAppTests;
@@ -335,6 +391,7 @@
 			buildConfigurationList = B4BDB15D4375A4ABA7E5A88A /* Build configuration list for PBXNativeTarget "LocalVoiceKeyboard" */;
 			buildPhases = (
 				9DF556B897295A5A3A0214D4 /* Sources */,
+				ACD08C3B198A532DF4BF3AC6 /* Resources */,
 				5C52C86D1CE56D0365543D79 /* Frameworks */,
 				7A9F13C6BFD507D7388D5769 /* Embed Foundation Extensions */,
 			);
@@ -348,7 +405,7 @@
 			name = LocalVoiceKeyboard;
 			packageProductDependencies = (
 				ADD1935DA754A8AA5761ECFF /* VoiceKeyboardCore */,
-				9399BDD74AE5666DE389AE47 /* MoonshineVoice */,
+				9A89C71BAED711D94B9162A7 /* TranscribeCpp */,
 			);
 			productName = LocalVoiceKeyboard;
 			productReference = 911EA690314F97FEDF3630FA /* LocalVoiceKeyboard.app */;
@@ -441,7 +498,7 @@
 					5020AFFF60B5BE4009505F87 = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
-						SystemCapabilities = "[\"com.apple.BackgroundModes\": [\"enabled\": 1], \"com.apple.ApplicationGroups.iOS\": [\"enabled\": 1]]";
+						SystemCapabilities = "[\"com.apple.ApplicationGroups.iOS\": [\"enabled\": 1], \"com.apple.BackgroundModes\": [\"enabled\": 1]]";
 					};
 					72F7BEC905982E497B096DB3 = {
 						DevelopmentTeam = "";
@@ -473,7 +530,7 @@
 			mainGroup = FC52C214F78404951521524A;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				07719D75A433CCF4EA666C0A /* XCRemoteSwiftPackageReference "moonshine-swift" */,
+				69152F774D6C843F240CCAA8 /* XCLocalSwiftPackageReference ".build/Parakeet/SwiftPackage" */,
 				748CD0428E5D6DA0D955C4F9 /* XCLocalSwiftPackageReference "." */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -491,6 +548,18 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		ACD08C3B198A532DF4BF3AC6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BE8C8B3E860E6AEAD9224972 /* Assets.xcassets in Resources */,
+				4D18C4A49C0CF282F1EB7935 /* Parakeet-Licenses.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		20630F1CFB588BBE7FAF07E5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -498,6 +567,7 @@
 			files = (
 				BDCA94084357E2D17993FE0D /* SaywickActivityAttributes.swift in Sources */,
 				292A23A336004CFBCBB9A8E5 /* SaywickStatusWidget.swift in Sources */,
+				9AA084E0B0CB5EF5007E89FB /* StopSaywickRecording.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -506,6 +576,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				49E9B7725F8AE49BBF434D8D /* AudioArchiveTests.swift in Sources */,
+				42C0C1D31739D1B3F47B07AF /* AudioCaptureTapTests.swift in Sources */,
+				27F664AB3E806243C0CBF347 /* KeyboardViewController.swift in Sources */,
+				1D05A2672B3C26CE06B347EB /* MeetingRecordingTests.swift in Sources */,
+				14158754D162ADF52EEB4782 /* MicrophoneSessionTests.swift in Sources */,
+				0CC2F258C85EC949A07A6A78 /* ParakeetDeviceTests.swift in Sources */,
+				760162998AD5E373B477DAA9 /* SharedContainerStore.swift in Sources */,
+				82DA62B4717B2E5D679DF167 /* TranscriptPostProcessorTests.swift in Sources */,
+				86B6B99D9FC3D4C395A09E16 /* TypingFallbackTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -513,26 +591,30 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				23DA37C5173D154AF30C489E /* ActivationDiagnostics.swift in Sources */,
 				1DD567914466592C2DC22D2C /* AppModel.swift in Sources */,
-				9DB8EFE3EC4B80DF1ECDC3D5 /* AppleSpeechAnalyzerEngine.swift in Sources */,
 				71BA49CA6EFF0834F4F19990 /* AudioArchive.swift in Sources */,
 				99093EA3411FE3634DBEEC98 /* AudioBufferConverter.swift in Sources */,
+				4D165FB9CB82F2504DA01D56 /* AudioCaptureTap.swift in Sources */,
 				94D52ADC7006AE5BA2F1AF69 /* AudioFileTranscriber.swift in Sources */,
-				3151C534667EDE188A6F2583 /* AzureCredentialStore.swift in Sources */,
+				2A2115D4D4335702C1C51E06 /* ContactWordsPicker.swift in Sources */,
 				50E49238DDC8AD63B5876D67 /* ContentView.swift in Sources */,
 				DBF451F3F56E68115655EFBB /* HistoryModel.swift in Sources */,
 				CA43F52962D0BA6D9A86BAD7 /* HistoryView.swift in Sources */,
 				343A91BB25887DB49FC67882 /* LiveSpeechEngine.swift in Sources */,
 				2766FD32F9D27813E9CE3A34 /* LocalVoiceKeyboardApp.swift in Sources */,
-				A16D77A31798FBDA1A46C7D0 /* MAISpeechEngine.swift in Sources */,
-				2FC1B0BE637C178D8B07AFE0 /* MAIVoiceLiveEngine.swift in Sources */,
-				38DB1884EBE1F7529E84BF35 /* MoonshineSpeechEngine.swift in Sources */,
+				4421FBF44857387A9551AB0F /* MeetingRecordingEngine.swift in Sources */,
+				45DD58648652E081DF44F7B3 /* MicrophoneCapture.swift in Sources */,
+				209BF85FFA39BAC02359F397 /* ParakeetModelStore.swift in Sources */,
+				28B16608A7B7507FD517FC37 /* ParakeetSpeechEngine.swift in Sources */,
+				773938CFEAD6E49DD822AE4D /* ParakeetWorker.swift in Sources */,
 				8275C244C9A0569950349B9B /* RecordingActivity.swift in Sources */,
 				17A9F745CBBE4E208388224D /* SaywickActivityAttributes.swift in Sources */,
 				881D5343202FC130F7F0D8D3 /* SaywickShortcuts.swift in Sources */,
 				C12CB502980D067A2CBD3AA9 /* SharedAudioInbox.swift in Sources */,
 				070C1FF7FAB9E1601A013A8D /* SharedContainerStore.swift in Sources */,
 				C1CB30EE5AB2A6071D0F5D45 /* SimulatorSpeechEngine.swift in Sources */,
+				B631BBA6A6E6BA5E9928C5B5 /* StopSaywickRecording.swift in Sources */,
 				5F2C4DF5710B6DC337349F11 /* TranscriptPostProcessor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -545,6 +627,7 @@
 				1F55595D4FC78BA27DD63183 /* SaywickActivityAttributes.swift in Sources */,
 				66FC9039525129C9F3212D4B /* SharedAudioInbox.swift in Sources */,
 				D421BF6B529B93158F38774F /* SharedContainerStore.swift in Sources */,
+				1F55FB21495EA9918DDBE8E9 /* StopSaywickRecording.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -552,6 +635,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6706EF0EC463D43A1A631470 /* BackgroundRecordingDeviceTests.swift in Sources */,
+				B54D5E208DDC5BBFBAC701DE /* KeyboardHandoffDeviceTests.swift in Sources */,
 				E61F2ED22F046885B833256A /* LocalVoiceKeyboardUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -742,6 +827,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).app";
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) SAYWICK_APP";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -851,6 +937,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).app";
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) SAYWICK_APP";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -988,28 +1075,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		69152F774D6C843F240CCAA8 /* XCLocalSwiftPackageReference ".build/Parakeet/SwiftPackage" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .build/Parakeet/SwiftPackage;
+		};
 		748CD0428E5D6DA0D955C4F9 /* XCLocalSwiftPackageReference "." */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = .;
 		};
 /* End XCLocalSwiftPackageReference section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		07719D75A433CCF4EA666C0A /* XCRemoteSwiftPackageReference "moonshine-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/moonshine-ai/moonshine-swift";
-			requirement = {
-				kind = exactVersion;
-				version = 0.1.5;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
-		9399BDD74AE5666DE389AE47 /* MoonshineVoice */ = {
+		9A89C71BAED711D94B9162A7 /* TranscribeCpp */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 07719D75A433CCF4EA666C0A /* XCRemoteSwiftPackageReference "moonshine-swift" */;
-			productName = MoonshineVoice;
+			productName = TranscribeCpp;
 		};
 		ADD1935DA754A8AA5761ECFF /* VoiceKeyboardCore */ = {
 			isa = XCSwiftPackageProductDependency;

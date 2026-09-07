@@ -11,8 +11,11 @@ let package = Package(
     products: [
         .library(name: "VoiceKeyboardCore", targets: ["VoiceKeyboardCore"]),
         .executable(name: "core-smoke", targets: ["CoreSmoke"]),
+        .executable(name: "pause-bench-azure", targets: ["PauseBenchAzure"]),
     ],
     targets: [
+        .executableTarget(name: "PauseBenchAzure", dependencies: ["VoiceKeyboardCore"],
+                          path: "Tools/PauseBench/AzureRunner"),
         .target(
             name: "VoiceKeyboardCore",
             path: "Sources/VoiceKeyboardCore"

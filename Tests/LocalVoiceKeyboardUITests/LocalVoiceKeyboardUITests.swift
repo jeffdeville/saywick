@@ -3,19 +3,19 @@ import XCTest
 @MainActor
 final class LocalVoiceKeyboardUITests: XCTestCase {
     func testSimulatorDemoStreamsFinalizesAndCleansTranscript() throws {
-        try verifyDemo(engine: "maiTranscribe2")
+        try verifyDemo(engine: "parakeetStreaming")
     }
 
-    func testMAILiveDemoStreamsAndFinalizesWithoutCleanup() throws {
+    func testLegacyEnginePreferenceMigratesToParakeet() throws {
         try verifyDemo(engine: "maiVoiceLive")
     }
 
-    func testCustomWordsApplyToFinalMicrosoftTranscript() throws {
-        try verifyDemo(engine: "maiVoiceLive", customWords: "local voice simulator = Breccan")
+    func testCustomWordsApplyToFinalParakeetTranscript() throws {
+        try verifyDemo(engine: "parakeetStreaming", customWords: "local voice simulator = Breccan")
     }
 
     func testHistorySurvivesClearAndRestoresOriginal() throws {
-        try verifyDemo(engine: "maiVoiceLive")
+        try verifyDemo(engine: "parakeetStreaming")
         let app = XCUIApplication()
         app.buttons["Clear"].tap()
         app.tabBars.buttons["History"].tap()
@@ -28,6 +28,24 @@ final class LocalVoiceKeyboardUITests: XCTestCase {
         restore.tap()
         XCTAssertTrue(app.staticTexts["Restored from History — ready to insert"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["transcriptText"].label.contains("local voice simulator"))
+    }
+
+    func testMeetingSavesWithoutCleanupAndIgnoresClear() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["LOCAL_VOICE_SIMULATOR_DEMO"] = "1"
+        app.launchArguments = ["-selectedPostProcessor", "none", "-customWords", "", "-keepAudio", "NO"]
+        app.launch()
+        let meeting = app.buttons["Record meeting"]
+        XCTAssertTrue(meeting.waitForExistence(timeout: 5))
+        meeting.tap()
+        let stop = app.buttons["Stop meeting"]
+        XCTAssertTrue(stop.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Clear"].isEnabled)
+        XCTAssertFalse(app.buttons["Restart transcript"].exists)
+        stop.tap()
+        XCTAssertTrue(app.staticTexts["Meeting saved — transcribe it in History"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["History"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Meeting")).firstMatch.waitForExistence(timeout: 5))
     }
 
     private func verifyDemo(engine: String, customWords: String = "") throws {
@@ -47,7 +65,7 @@ final class LocalVoiceKeyboardUITests: XCTestCase {
             ].waitForExistence(timeout: 5)
         )
 
-        let stopButton = app.buttons["Stop and transcribe"]
+        let stopButton = app.buttons["Stop and clean up"]
         XCTAssertTrue(stopButton.waitForExistence(timeout: 5))
         stopButton.tap()
 

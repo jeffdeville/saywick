@@ -27,14 +27,14 @@ final class ShareViewController: UIViewController {
             do {
                 guard let url else { throw error ?? CocoaError(.fileReadUnknown) }
                 let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                guard size > 0 && size <= 200_000_000 else { throw CocoaError(.fileReadTooLarge) }
+                guard size > 0 && size <= 1_000_000_000 else { throw CocoaError(.fileReadTooLarge) }
                 let ext = url.pathExtension.lowercased()
                 guard ["m4a", "wav", "mp3", "aac", "caf", "aif", "aiff", "flac"].contains(ext) else { throw CocoaError(.fileReadUnknown) }
                 let inbox = try SharedAudioInbox.directory()
                 let target = inbox.appendingPathComponent(UUID().uuidString + "." + ext)
                 try FileManager.default.copyItem(at: url, to: target)
                 try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: target.path)
-                result = "Audio saved locally. Open Saywick → History → Shared audio to import it, then choose a model. Nothing has been uploaded."
+                result = "Audio saved locally. Open Saywick → History → Shared audio to import it, then transcribe with Parakeet. Nothing has been uploaded."
             } catch { result = "Could not save audio: \(error.localizedDescription). Try Save to Files, then Import Audio in Saywick." }
             Task { @MainActor in self?.label.text = result; self?.close.isEnabled = true }
         }

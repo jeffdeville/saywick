@@ -102,6 +102,7 @@ extension SpeechEngineID {
         case .maiVoiceLive: "mai-transcribe (version unconfirmed) · Voice Live 2026-04-10"
         case .moonshineMediumStreaming: "Moonshine Medium Streaming · SDK 0.1.5"
         case .appleSpeechAnalyzer: "Apple SpeechAnalyzer · system model"
+        case .parakeetStreaming: "Parakeet Unified English 0.6B Q8_0 · transcribe.cpp 0.2.0 · CPU + Accelerate"
         }
     }
 }

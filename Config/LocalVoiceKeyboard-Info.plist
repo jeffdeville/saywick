@@ -52,7 +52,7 @@
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Record dictation for transcription by your selected engine. Microsoft mode sends recordings to Azure; local engines process on this iPhone.</string>
+	<string>Record dictation for on-device transcription with Parakeet. Audio is never sent to a transcription service.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

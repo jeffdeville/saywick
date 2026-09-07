@@ -42,28 +42,14 @@ enum SpeechEngineError: LocalizedError {
 
 @MainActor
 enum LiveSpeechEngineFactory {
-    static func make(_ id: SpeechEngineID) -> any LiveSpeechEngine {
+    static func make(allowModelDownload: Bool = true, meeting: Bool = false) -> any LiveSpeechEngine {
         #if targetEnvironment(simulator)
         if ProcessInfo.processInfo.environment["LOCAL_VOICE_SIMULATOR_DEMO"] == "1" {
-            return SimulatorSpeechEngine(representing: id)
+            return SimulatorSpeechEngine(representing: .parakeetStreaming)
         }
         #endif
 
-        switch id {
-        case .maiVoiceLive:
-            return MAIVoiceLiveEngine(
-                endpoint: UserDefaults.standard.string(forKey: "azureSpeechEndpoint") ?? "",
-                key: AzureCredentialStore.read()
-            )
-        case .maiTranscribe2:
-            return MAISpeechEngine(
-                endpoint: UserDefaults.standard.string(forKey: "azureSpeechEndpoint") ?? "",
-                key: AzureCredentialStore.read()
-            )
-        case .appleSpeechAnalyzer:
-            return AppleSpeechAnalyzerEngine()
-        case .moonshineMediumStreaming:
-            return MoonshineSpeechEngine()
-        }
+        if meeting { return MeetingRecordingEngine() }
+        return ParakeetSpeechEngine(allowModelDownload: allowModelDownload)
     }
 }

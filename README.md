@@ -2,17 +2,17 @@
 
 Your words. Your way.
 
-An open-source iOS voice keyboard with swappable speech engines, local cleanup,
-retained audio, and comparisons of different models on the same recording.
+An open-source iOS voice keyboard with on-device Parakeet transcription, local
+cleanup, a basic typing keyboard, and retained audio for playback and retranscription.
 Built for personal testing on iPhone 16 Pro; targets iOS 26. This is a prototype,
 not an App Store release. The Saywick App Store name has not been reserved.
 
 ## Features
 
-- Microsoft MAI-Transcribe-2 upload transcription, Microsoft MAI Live streaming,
-  on-device Apple SpeechAnalyzer, and on-device Moonshine Medium Streaming.
-- Optional Apple Foundation Models cleanup, simple local formatting, or raw output.
-- Explicit custom-word corrections, applied once after cleanup.
+- On-device Parakeet English transcription after a one-time 731 MB download.
+- Optional faithful punctuation/capitalization cleanup with Apple Intelligence,
+  opt-in paragraphs and bullets, simple local formatting, or raw output.
+- Word-list dictionary and optional exact corrections, applied before cleanup.
 - Local history with original and final text, engine metadata, saved configuration,
   independent comparison runs, pinning, search, and deletion.
 - Retained 16 kHz mono audio for playback and retranscription. Audio retention is
@@ -20,22 +20,25 @@ not an App Store release. The Saywick App Store name has not been reserved.
 - Files import and a Share extension for audio from Voice Memos and other apps.
 - Copy text, restore original/final text to the keyboard, export text or a Markdown
   comparison, and share text to Notes through the standard iOS share sheet.
-- Start Dictation / Open History App Shortcuts; Start Dictation can be assigned to
-  an iPhone Action Button. The shortcut opens the containing app to start recording.
-- Live Activity / Dynamic Island recording status without transcript contents.
+- Start Dictation, Record Meeting, and background Stop Recording App Shortcuts;
+  assign them to the Action Button, Back Tap, or a custom Shortcut.
+- Meeting audio recording up to four hours, with local transcription afterward.
+- Live Activity / Dynamic Island recording status and a Stop button, without transcript contents.
 - Keyboard Stop & Insert, Clear/Restart, guarded Undo Insertion, held delete, and
-  horizontal cursor movement by dragging on the space key. Not a full QWERTY keyboard.
+  horizontal cursor movement by dragging on the space key. Basic QWERTY typing, Shift, numbers, and punctuation work without Full Access.
 
 ## Privacy and retention
 
-The containing app owns the microphone. The keyboard extension only exchanges
-commands and current transcript text through an App Group; it never receives the
-Azure key. Keys live in the app's device-only Keychain.
+The containing app owns the microphone. The keyboard extension exchanges commands
+and current transcript text through an App Group when Full Access is enabled.
+Typing needs neither Full Access nor a model download.
 
-Local engines recognize on device after model downloads. Microsoft modes send
-audio to your configured Azure resource. File comparisons using Microsoft require
-explicit confirmation for each run. Cleanup and custom-word correction run locally.
-There is no bundled API key or service subscription.
+Parakeet recognizes English on device after its one-time model download. There are
+no cloud transcription engines, credentials, accounts, or service subscriptions.
+Cleanup and custom-word correction also run locally. Existing History retains its
+original engine labels; old recordings can be transcribed again with Parakeet.
+Legacy provider protocol helpers under VoiceKeyboardCore support the historical
+command-line benchmarks only; the iOS app has no provider client or upload path.
 
 History lives in Application Support, excluded from backups, with iOS file
 protection available after first unlock so background dictation can write safely.
@@ -70,67 +73,105 @@ Existing personal installs retain the old bundle/App Group identifiers so renami
 doesn't discard credentials, settings, or keyboard setup. A new distributor should
 choose its own identifiers before the first public release.
 
-## Azure configuration
-
-Create a Speech resource in a region supporting your selected model (the prototype
-was configured in East US). In Saywick's Azure connection section, enter the resource
-root endpoint, such as `https://your-resource.cognitiveservices.azure.com/`, and a key
-from Azure's Keys and Endpoint page. Save the connection before recording.
-
-- MAI-Transcribe-2 records then uploads on Stop, requesting `clean` output using
-  API `2025-10-15`. Spoken commands and live partials are unavailable in this mode.
-- MAI Live uses Voice Live API `2026-04-10`, `mai-transcribe`, and a mandatory
-  `gpt-5-nano` session model with automatic responses disabled. Microsoft does not
-  identify the transcription alias as version 2. No assistant inference is requested.
-- Voice Live pricing is separate from batch transcription pricing. Do not assume
-  identical per-minute costs. The connection test checks session setup, not recognition.
-
-References: [MAI transcription](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/mai-transcribe),
-[Voice Live](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/voice-live-how-to).
-
 ## Everyday dictation
 
-Start listening in Saywick, switch to the destination app, select Saywick's keyboard,
-and tap Stop & Insert. With a live engine, you can say “stop and insert”, “stop and
-restart”, or “clear transcript”. Spoken command phrases remain in the original
-recording/transcript for honest model comparisons; final insertion strips commands.
+Keep keyboard ready is enabled by default. Start listening in Saywick once, then
+switch to the destination app and select the Saywick keyboard. Tap **Stop & Insert**
+to finish that dictation, then **Dictate** for the next one without leaving
+the destination app. Each dictation has its own transcript and History entry.
+The keyboard opens in dictation mode. **ABC** switches to typing; **Voice** returns.
+One primary button reflects readiness, recording, and finishing. **Open Saywick**
+requests a URL handoff to activate the microphone in the app. If iOS rejects the
+request, inline instructions explain the Shortcut fallback. More expands inline.
 
-The keyboard's Open Recorder button may be refused by iOS. The supported fallback
-is opening Saywick, or choosing Start Saywick Dictation in Shortcuts / Action Button
-settings. This release doesn't promise invisible, background-only microphone startup.
+After each completed dictation, readiness lasts **2 minutes idle**. Starting a new
+dictation cancels that countdown; the next completed dictation starts a fresh one.
+Active recordings are not cut off at two minutes. The microphone indicator remains
+on while ready, but incoming audio is discarded before copying, saving, or inference.
+**End** releases the microphone immediately. Expiry preserves the finished transcript.
+Hiding the keyboard does not reset or cancel the idle deadline. Sessions are not
+restored after relaunch. Reactivate in Saywick or with Start Dictation in Shortcuts.
 
-Sessions stop at the selected 5/15/25 minute limit. Live modes also stop after 60
-seconds without new recognized speech. Interruptions attempt to finalize and save;
-if recognition fails, checkpointed text and retained audio are available in History.
-Hard process termination can still lose the last in-flight audio/text segment.
+Turn off Keep keyboard ready before starting if you want the previous single-recording
+behavior: Stop releases the microphone, and hiding or switching keyboards after using
+the Saywick keyboard stops recording after a 3-second grace period.
 
-## Compare recordings
+The keyboard's Start button starts another dictation only while the microphone is
+ready. Otherwise it explains how to activate Saywick through the app or Shortcuts;
+it never launches the containing app. History playback asks you to end readiness first.
 
-Open History > a recording. Play the audio, select a model, then Run Selected Model.
-Each attempt appends a new run, preserving earlier outputs and failures. Model labels,
-cleanup choice, vocabulary, timestamps, and elapsed time are recorded with each run.
-For local models the first comparison may download assets.
+## Background activation and meetings
 
-Use Reprocess Original to test current cleanup/custom words without retranscribing.
-Unlike live dictation's fallback, a failed comparison cleanup is recorded explicitly
-as an error. Use Original/Final in Keyboard to restore that exact text for insertion.
+In Saywick, tap **Set up background dictation** to grant microphone access and
+prepare Parakeet once. Enable Live Activities in iOS Settings for Saywick. Then
+choose **Start dictation** in Shortcuts/Action Button settings. The intent uses
+Apple's AudioRecordingIntent and LiveActivityIntent. Cold microphone starts open
+Saywick using the system's dynamic foreground continuation: direct background
+activation failed on the test iPhone. Dictation can restart without opening the app
+while its microphone is still ready. A missing model produces setup instructions
+instead of downloading weights during a shortcut.
 
-Comparisons preserve raw recognition text, including any spoken control phrases in
-the audio; they never execute those phrases as commands. A live-session elapsed time
-includes recording, so it is not directly comparable to a file run's processing time.
-MAI Live file runs replay at real-time speed. No automated accuracy score is claimed.
+**Record meeting** in the app or **Start Saywick meeting** in Shortcuts (which opens
+Saywick to activate the microphone) records
+microphone audio straight to local storage, without running transcription. It does
+not require Parakeet to be downloaded. Meetings always retain audio (even when
+ordinary dictation audio retention is off), and follow History's normal expiry/pin
+settings afterward. Recording ignores keyboard dismissal and the dictation idle
+timer, and stops at four hours. PCM16 mono audio uses about 115 MB per hour.
 
-## Audio import and export
+Stop through the app, the Live Activity/Dynamic Island Stop button, or **Stop Saywick
+recording** in Shortcuts. The Stop shortcut also releases dictation readiness.
+Use History > recording > **Transcribe with Parakeet** afterward, keeping Saywick
+open while file transcription runs. Meeting mode does not identify speakers or
+produce meeting summaries. It captures the microphone, not other apps' call audio.
 
-Use History > Import Audio for a file in Files. For Voice Memos, share a **Rendered**
-audio file to Saywick, open Saywick > History, and import it from Shared Audio. The
-Share extension only queues the file; it doesn't transcribe or force-open the app.
-If sharing isn't offered, Save to Files and use Import Audio.
+The recorder and command/interruption observers are process-owned, so they do not
+rely on a SwiftUI screen task remaining alive. Background starts require microphone
+permission already granted and a successfully created Live Activity. Failed starts
+surface a Shortcut error and release audio resources. A recording is never resumed
+automatically after a process termination or interruption.
 
-Audio must be readable by AVAudioFile, nonempty, and no longer than 25 minutes.
-The share inbox also limits individual files to 200 MB. Unsupported formats display
-an error; successful imports are normalized locally before any model is called.
-Long meeting recordings, diarization, and a standalone Voice Notes product are deferred.
+## Saved recordings and imports
+
+Open History > a recording to play audio, copy text, restore text to the keyboard,
+or **Transcribe with Parakeet**. Each run preserves earlier results and settings.
+**Reprocess original** applies current local cleanup and custom words without
+transcribing again. Existing recordings from retired engines remain readable.
+
+Use History > Import Audio, or share rendered audio from Voice Memos to Saywick.
+The Share extension queues audio locally; import it from Shared Audio in History.
+Imports retain audio regardless of the microphone retention preference. Files must
+be readable, nonempty, and no longer than four hours; shared files are limited to
+1 GB. Speaker diarization remains outside the current scope.
+
+## Final text cleanup
+
+Live text is a draft. Speech engines may interpret a thinking pause as a sentence
+boundary; Saywick preserves that original output in History. Choose **Faithful
+cleanup (Apple Intelligence)** to repair punctuation and capitalization after Stop,
+using the surrounding words to reconsider those boundaries. Existing cleanup
+selections are preserved; new installs default to Faithful cleanup. Raw and Fast
+local rules do not perform semantic repair.
+
+Faithful cleanup preserves every word in order, including repetitions and fillers.
+**Paragraphs & bullets (Apple Intelligence)** additionally permits layout for clear
+lists or topic changes. Neither mode summarizes or rewrites wording. Formatting
+preferences cannot override word preservation. Custom-word corrections run
+once beforehand and may intentionally replace words.
+
+Long transcripts are split into disjoint edit targets with read-only context from
+both neighboring sections. Each section uses a fresh model session; context is
+never inserted into the output. A lexical check rejects added, omitted, reordered
+or substituted words, changed numeric tokens, or lowercased acronyms. This checks
+word preservation, not the correctness of every punctuation or proper-name choice.
+
+If the model is unavailable, a request fails, or an edit fails validation, live
+recordings fall back to basic cleanup for the original transcript and show the
+reason. History comparison runs report the failure instead. No partial model edit
+is published after an error. Very long individual words or formatting preferences
+may also trigger this fallback. Long recordings require multiple model requests
+and take longer to finish. Recognition segmentation settings remain unchanged
+pending comparisons on the same recorded audio.
 
 ## Custom words
 
@@ -141,10 +182,15 @@ Brecken = Breccan
 Breccan
 ```
 
-Corrections are case-insensitive whole-word/phrase matches. A single word enforces
-capitalization. Longer matches win; substitutions don't cascade. This is deterministic
-final-text correction, not acoustic training or fuzzy matching. Optional Apple model
-cleanup can still change wording; compare it with the original before relying on it.
+Standalone words use conservative local spelling/sound matching, including short
+word splits such as `say wick` → `Saywick`. Ambiguous candidates stay unchanged;
+common name/word collisions such as may and will are protected. Exact aliases
+remain available for persistent errors. Correction runs before cleanup and does
+not train or bias Parakeet's recognizer. The original transcript remains in History.
+
+**Add names from Contacts** opens Apple's selection picker, then a review of the
+names to add. Only selected names are stored locally, with duplicates removed.
+Edit or delete entries directly in the word list.
 
 ## Verification
 
@@ -163,5 +209,21 @@ See [device checks](docs/device-testing.md) and [roadmap](docs/roadmap.md).
 
 ## License
 
-MIT. Moonshine remains a separately licensed dependency; its models and all cloud
-services retain their own terms. No cloud credentials or model weights are published.
+MIT for Saywick. Parakeet weights and its native runtime retain their respective
+licenses; notices ship in Sources/App/Resources/Parakeet-Licenses.txt. Model weights
+are downloaded, not committed to this repository.
+
+## Raw pause regression tests
+
+The historical [pause benchmark](docs/pause-benchmark.md) compares Handy and retired
+Microsoft profiles. It is developer tooling, not part of the shipping app.
+
+See [the Spokenly comparison](docs/spokenly-comparison.md) for published workflow differences.
+
+## Parakeet runtime
+
+Saywick uses Parakeet Unified English with Handy's Q8_0 model and pinned native
+runtime. All existing installs now select Parakeet for new audio.
+On a fresh checkout, run `make parakeet-bootstrap` before generating or building
+the Xcode project (requires CMake and Xcode). See [the iOS experiment](docs/parakeet-ios.md)
+for model details, limitations, and the opt-in phone benchmark.

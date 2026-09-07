@@ -45,13 +45,24 @@ final class HistoryModel {
         } catch { message = "History: \(error.localizedDescription)" }
     }
 
-    func begin(id: UUID) throws -> URL? {
+    func begin(id: UUID, meeting: Bool = false) throws -> URL? {
         guard let store else { throw SpeechEngineError.unavailable("History storage is unavailable. Restart Saywick.") }
         stopPlayback()
         activeID = id
-        try store.save(TranscriptHistoryEntry(id: id, hasAudio: keepAudio))
+        try store.save(TranscriptHistoryEntry(id: id, title: meeting ? "Meeting" : "Dictation",
+            source: meeting ? "Meeting recording" : "Microphone", hasAudio: keepAudio || meeting))
         reload()
-        return keepAudio ? store.audioURL(id) : nil
+        return keepAudio || meeting ? store.audioURL(id) : nil
+    }
+
+    func completeMeeting(id: UUID, status: String = "Audio saved — transcribe with Parakeet") throws {
+        guard let store, var entry = try store.load().first(where: { $0.id == id }) else {
+            throw SpeechEngineError.unavailable("Meeting history entry is unavailable.")
+        }
+        entry.status = status
+        entry.hasAudio = FileManager.default.fileExists(atPath: store.audioURL(id).path)
+        try store.save(entry)
+        reload()
     }
 
     func checkpoint(id: UUID, run: TranscriptRun, status: String) {
@@ -72,6 +83,10 @@ final class HistoryModel {
     }
     func stopPlayback() { player?.stop(); player = nil; playingID = nil }
     func play(_ entry: TranscriptHistoryEntry) {
+        guard !MicrophoneCapture.shared.isRunning else {
+            message = "End the microphone session before playing a recording."
+            return
+        }
         if playingID == entry.id { stopPlayback(); return }
         stopPlayback()
         guard let url = audioURL(entry) else { return }
@@ -108,7 +123,7 @@ final class HistoryModel {
             defer { isWorking = false; work = nil }
             let access = source.startAccessingSecurityScopedResource()
             defer { if access { source.stopAccessingSecurityScopedResource() } }
-            var entry = TranscriptHistoryEntry(title: source.deletingPathExtension().lastPathComponent, source: "Imported audio", hasAudio: true, status: "Imported — choose a model")
+            var entry = TranscriptHistoryEntry(title: source.deletingPathExtension().lastPathComponent, source: "Imported audio", hasAudio: true, status: "Imported — ready for Parakeet")
             do {
                 try await AudioFileTranscriber.normalizedCopy(from: source, to: store.audioURL(entry.id))
                 try Task.checkCancellation()
@@ -118,7 +133,7 @@ final class HistoryModel {
                     try? FileManager.default.removeItem(at: source)
                     reload()
                 }
-                message = "Imported locally. Open the recording and choose a model. Cloud runs require confirmation."
+                message = "Imported locally. Open the recording and tap Transcribe with Parakeet."
             } catch {
                 try? store.deleteAudio(entry.id)
                 message = error is CancellationError ? "Import cancelled" : error.localizedDescription
@@ -143,10 +158,10 @@ final class HistoryModel {
                 }
                 try Task.checkCancellation()
                 message = "Applying cleanup on device…"
-                let cleaned = try await TranscriptPostProcessor.process(raw, using: cleanup, customInstructions: instructions,
+                let cleaned = try await TranscriptPostProcessor.process(words.apply(to: raw), using: cleanup, customInstructions: instructions,
                                                                         preferredWords: words.preferredWords)
                 try Task.checkCancellation()
-                let run = TranscriptRun(engine: engine, rawText: raw, finalText: words.apply(to: cleaned), cleanup: cleanup,
+                let run = TranscriptRun(engine: engine, rawText: raw, finalText: cleaned, cleanup: cleanup,
                                         cleanupInstructions: instructions, vocabulary: vocabulary,
                                         elapsedSeconds: Date().timeIntervalSince(started))
                 try append(run, to: entry.id)

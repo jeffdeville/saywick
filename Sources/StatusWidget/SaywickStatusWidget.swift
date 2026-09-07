@@ -1,4 +1,5 @@
 import ActivityKit
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -14,20 +15,28 @@ struct SaywickStatusWidget: Widget {
                 }
                 Spacer()
                 Text(context.attributes.startedAt, style: .timer).monospacedDigit()
+                Button(intent: StopSaywickRecording()) { Image(systemName: "stop.circle.fill") }
+                    .accessibilityLabel("Stop Saywick recording")
             }
             .padding()
-            .widgetURL(URL(string: "saywick://recorder"))
+            .widgetURL(URL(string: "saywick://recorder?source=liveActivity"))
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) { Label("Saywick", systemImage: "mic.fill") }
                 DynamicIslandExpandedRegion(.trailing) { Text(context.attributes.startedAt, style: .timer).monospacedDigit() }
-                DynamicIslandExpandedRegion(.bottom) { Text("\(context.state.phase) · \(context.attributes.engine)") }
+                DynamicIslandExpandedRegion(.bottom) {
+                    HStack {
+                        Text("\(context.state.phase) · \(context.attributes.engine)")
+                        Spacer()
+                        Button(intent: StopSaywickRecording()) { Label("Stop", systemImage: "stop.circle.fill") }
+                    }
+                }
             } compactLeading: {
                 Image(systemName: "mic.fill").foregroundStyle(.red)
             } compactTrailing: {
                 Text(context.attributes.startedAt, style: .timer).monospacedDigit().frame(width: 44)
             } minimal: { Image(systemName: "mic.fill").foregroundStyle(.red) }
-            .widgetURL(URL(string: "saywick://recorder"))
+            .widgetURL(URL(string: "saywick://recorder?source=liveActivity"))
         }
     }
 }

@@ -16,9 +16,8 @@ configFiles:
 packages:
   VoiceKeyboardCore:
     path: .
-  Moonshine:
-    url: https://github.com/moonshine-ai/moonshine-swift
-    exactVersion: 0.1.5
+  TranscribeCpp:
+    path: .build/Parakeet/SwiftPackage
 
 settings:
   base:
@@ -36,8 +35,8 @@ targets:
     dependencies:
       - package: VoiceKeyboardCore
         product: VoiceKeyboardCore
-      - package: Moonshine
-        product: MoonshineVoice
+      - package: TranscribeCpp
+        product: TranscribeCpp
       - target: LocalVoiceKeyboardExtension
         embed: true
       - target: SaywickShare
@@ -47,6 +46,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) SAYWICK_APP"
         CODE_SIGN_ENTITLEMENTS: Config/LocalVoiceKeyboard.entitlements
     info:
       path: Config/LocalVoiceKeyboard-Info.plist
@@ -66,7 +67,7 @@ targets:
             LSHandlerRank: Alternate
             LSItemContentTypes:
               - public.audio
-        NSMicrophoneUsageDescription: Record dictation for transcription by your selected engine. Microsoft mode sends recordings to Azure; local engines process on this iPhone.
+        NSMicrophoneUsageDescription: Record dictation for on-device transcription with Parakeet. Audio is never sent to a transcription service.
         UIApplicationSupportsIndirectInputEvents: true
         UIBackgroundModes:
           - audio
@@ -162,6 +163,7 @@ targets:
     sources:
       - Sources/StatusWidget
       - Sources/Shared/SaywickActivityAttributes.swift
+      - Sources/Shared/StopSaywickRecording.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).app.status
@@ -177,6 +179,8 @@ targets:
     platform: iOS
     sources:
       - Tests/SaywickAppTests
+      - Sources/KeyboardExtension/KeyboardViewController.swift
+      - Sources/Shared/SharedContainerStore.swift
     dependencies:
       - target: LocalVoiceKeyboard
     settings:

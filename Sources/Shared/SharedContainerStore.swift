@@ -56,6 +56,8 @@ struct SharedContainerStore {
         guard var snapshot = try readSnapshot(), snapshot.sessionID == sessionID else { return }
         snapshot.revision += 1
         snapshot.phase = .idle
+        snapshot.keyboardSessionExpiresAt = nil
+        snapshot.keyboardSessionActive = false
         snapshot.finalizedText = ""
         snapshot.partialText = ""
         snapshot.processedText = ""
@@ -72,6 +74,24 @@ struct SharedContainerStore {
     func readCommand() throws -> VoiceCommand? {
         guard FileManager.default.fileExists(atPath: commandURL.path) else { return nil }
         return try decoder.decode(VoiceCommand.self, from: Data(contentsOf: commandURL))
+    }
+
+    func write(presence: KeyboardPresence) throws {
+        // Preserve subsecond ordering against the recording start time.
+        let presenceEncoder = JSONEncoder()
+        presenceEncoder.dateEncodingStrategy = .millisecondsSince1970
+        try presenceEncoder.encode(presence).write(to: presenceURL, options: .atomic)
+    }
+
+    func readKeyboardPresence() throws -> KeyboardPresence? {
+        guard FileManager.default.fileExists(atPath: presenceURL.path) else { return nil }
+        let presenceDecoder = JSONDecoder()
+        presenceDecoder.dateDecodingStrategy = .millisecondsSince1970
+        return try presenceDecoder.decode(KeyboardPresence.self, from: Data(contentsOf: presenceURL))
+    }
+
+    private var presenceURL: URL {
+        rootURL.appendingPathComponent("keyboard-presence.json", isDirectory: false)
     }
 
     private var snapshotURL: URL {

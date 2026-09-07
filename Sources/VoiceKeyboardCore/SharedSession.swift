@@ -20,18 +20,24 @@ public struct SharedSessionSnapshot: Codable, Equatable, Sendable {
     public var message: String
     public var shouldAutoInsert: Bool
     public var updatedAt: Date
+    public var keyboardSessionExpiresAt: Date?
+    public var keyboardSessionActive: Bool?
+    public var isMeeting: Bool?
 
     public init(
         sessionID: UUID = UUID(),
         revision: Int = 0,
         phase: SharedSessionPhase = .idle,
-        engineID: SpeechEngineID = .moonshineMediumStreaming,
+        engineID: SpeechEngineID = .parakeetStreaming,
         finalizedText: String = "",
         partialText: String = "",
         processedText: String = "",
         message: String = "",
         shouldAutoInsert: Bool = false,
-        updatedAt: Date = Date()
+        updatedAt: Date = Date(),
+        keyboardSessionExpiresAt: Date? = nil,
+        keyboardSessionActive: Bool? = nil,
+        isMeeting: Bool? = nil
     ) {
         self.sessionID = sessionID
         self.revision = revision
@@ -43,6 +49,15 @@ public struct SharedSessionSnapshot: Codable, Equatable, Sendable {
         self.message = message
         self.shouldAutoInsert = shouldAutoInsert
         self.updatedAt = updatedAt
+        self.keyboardSessionExpiresAt = keyboardSessionExpiresAt
+        self.keyboardSessionActive = keyboardSessionActive
+        self.isMeeting = isMeeting
+    }
+
+    public func isKeyboardSessionActive(at now: Date = Date()) -> Bool {
+        let active = keyboardSessionActive ?? (keyboardSessionExpiresAt != nil)
+        return active && !KeyboardReadiness.hasExpired(deadline: keyboardSessionExpiresAt, at: now)
+            && now.timeIntervalSince(updatedAt) < 5 && now.timeIntervalSince(updatedAt) >= -5
     }
 
     public var liveText: String {
@@ -57,6 +72,8 @@ public struct SharedSessionSnapshot: Codable, Equatable, Sendable {
 }
 
 public enum VoiceCommandKind: String, Codable, Sendable {
+    case start
+    case endSession
     case stop
     case stopAndInsert
     case restart
@@ -143,10 +160,26 @@ public struct VoiceCommand: Codable, Equatable, Sendable {
     public var id: UUID
     public var kind: VoiceCommandKind
     public var issuedAt: Date
+    public var sessionID: UUID?
 
-    public init(id: UUID = UUID(), kind: VoiceCommandKind, issuedAt: Date = Date()) {
+    public init(id: UUID = UUID(), kind: VoiceCommandKind, issuedAt: Date = Date(), sessionID: UUID? = nil) {
         self.id = id
         self.kind = kind
         self.issuedAt = issuedAt
+        self.sessionID = sessionID
     }
+}
+
+/// Only the gap between dictations has a deadline. Recording itself is uncapped.
+public enum KeyboardReadiness {
+    public static let idleTimeout: TimeInterval = 120
+    public static func deadline(after now: Date) -> Date { now.addingTimeInterval(idleTimeout) }
+    public static func hasExpired(deadline: Date?, at now: Date) -> Bool {
+        guard let deadline else { return false }
+        return now >= deadline
+    }
+}
+
+public enum RecordingLimits {
+    public static let maximumDuration: TimeInterval = 4 * 60 * 60
 }

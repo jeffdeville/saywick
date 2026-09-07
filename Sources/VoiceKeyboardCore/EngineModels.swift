@@ -5,6 +5,10 @@ public enum SpeechEngineID: String, CaseIterable, Codable, Identifiable, Sendabl
     case maiVoiceLive
     case appleSpeechAnalyzer
     case moonshineMediumStreaming
+    case parakeetStreaming
+
+    // Legacy cases are retained only for saved History and benchmark compatibility.
+    public static let allCases: [SpeechEngineID] = [.parakeetStreaming]
 
     public var id: String { rawValue }
     public var isCloud: Bool { self == .maiTranscribe2 || self == .maiVoiceLive }
@@ -19,6 +23,8 @@ public enum SpeechEngineID: String, CaseIterable, Codable, Identifiable, Sendabl
             "Apple SpeechAnalyzer"
         case .moonshineMediumStreaming:
             "Moonshine v2 Medium Streaming"
+        case .parakeetStreaming:
+            "Parakeet"
         }
     }
 
@@ -32,6 +38,8 @@ public enum SpeechEngineID: String, CaseIterable, Codable, Identifiable, Sendabl
             "System-managed, on-device baseline"
         case .moonshineMediumStreaming:
             "Open-weight streaming model; downloaded once"
+        case .parakeetStreaming:
+            "English on this iPhone; one-time 731 MB download"
         }
     }
 }
@@ -40,8 +48,11 @@ public enum PostProcessorID: String, CaseIterable, Codable, Identifiable, Sendab
     case none
     case rules
     case foundationModels
+    case foundationModelsStructured
 
     public var id: String { rawValue }
+
+    public var usesLanguageModel: Bool { self == .foundationModels || self == .foundationModelsStructured }
 
     public var displayName: String {
         switch self {
@@ -50,7 +61,9 @@ public enum PostProcessorID: String, CaseIterable, Codable, Identifiable, Sendab
         case .rules:
             "Fast local rules"
         case .foundationModels:
-            "Apple Foundation Models"
+            "Faithful cleanup (Apple Intelligence)"
+        case .foundationModelsStructured:
+            "Paragraphs & bullets (Apple Intelligence)"
         }
     }
 }
