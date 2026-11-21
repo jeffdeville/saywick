@@ -1,0 +1,10 @@
+{
+  "name": "Saywick",
+  "subtitle": "On-device speech to text",
+  "category": "PRODUCTIVITY",
+  "keywords": "dictation,transcription,voice,keyboard,speech,text,offline,notes",
+  "description": "Turn English speech into text on your device. Saywick combines on-device transcription with a typing and dictation keyboard, so your words are ready to insert into other apps.\n\n• Dictate with Parakeet after a one-time model download.\n• Insert finished text with the Saywick keyboard, or copy it from the app.\n• Keep original text and optional audio in local History.\n• Add custom words and selected contact names to improve spelling.\n• Choose optional on-device cleanup or OpenAI cleanup, or keep cleanup off for raw output.\n\nEnglish recognition. Requires iOS 26 or later and approximately 731 MB for the initial speech model. Microphone permission is required for recording. Keyboard Full Access enables local sharing with the containing app; basic typing works without it. Some apps and secure fields require the system keyboard. Optional Apple Intelligence cleanup requires an available compatible on-device model.\n\nAn OpenAI API key is required only for OpenAI cleanup, which sends transcript text and relevant custom words to OpenAI. Audio remains on device.",
+  "supportURL_proposed_not_live": "https://appstore.workhand.ai/saywick/support/",
+  "privacyPolicyURL_proposed_not_live": "https://appstore.workhand.ai/saywick/privacy/",
+  "marketingURL_proposed_not_live": "https://appstore.workhand.ai/saywick/"
+}
