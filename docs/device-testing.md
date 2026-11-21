@@ -1,6 +1,18 @@
 # iPhone 16 Pro test checklist
 
-## Saywick history release
+## Required physical iPhone verification
+
+When a change touches microphone capture, background recording, or keyboard handoff, verify each affected workflow on a physical iPhone running the changed build before calling the change complete.
+
+- For microphone capture, dictate a recognizable phrase and check that the result reflects what you said.
+- For background recording, speak before and after switching apps, then stop and check that the recording or transcript includes both portions.
+- For keyboard handoff, use the Saywick keyboard in another app and verify that the intended text appears in the destination field.
+
+Exercise the specific behavior the change affects, including failure or recovery when applicable. Record the build, iPhone and iOS version, steps, and observed result. If the phone check is pending, keep the affected change open.
+
+[Return to the engineering guide](engineering.md)
+
+## Historical Saywick history release checklist
 
 - Confirm the renamed app upgrades in place without losing Azure settings.
 - Record with each of the four engines; play the retained audio after Stop.

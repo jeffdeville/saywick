@@ -35,6 +35,8 @@ letters, Shift, symbols, delete, globe, and Return with Full Access disabled in 
 
 ## Meeting sessions
 
+Dedicated meeting recording is deferred. This section describes the implementation in this checkout. [Product scope](engineering.md#product-promises)
+
 Meeting mode has no readiness lease. It streams microphone audio to a retained WAV,
 ignores keyboard dismissal, and has a four-hour recording limit. Stop closes the file
 and saves a History entry without invoking Parakeet or cleanup. Transcription is an

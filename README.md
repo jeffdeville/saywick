@@ -17,7 +17,6 @@ not an App Store release. The Saywick App Store name has not been reserved.
   independent comparison runs, pinning, search, and deletion.
 - Retained 16 kHz mono audio for playback and retranscription. Audio retention is
   enabled by default (7 days); text defaults to 30 days. Pins exempt both from expiry.
-- Files import and a Share extension for audio from Voice Memos and other apps.
 - Copy text, restore original/final text to the keyboard, export text or a Markdown
   comparison, and share text to Notes through the standard iOS share sheet.
 - Start Dictation, Record Meeting, and background Stop Recording App Shortcuts;
@@ -102,6 +101,8 @@ it never launches the containing app. History playback asks you to end readiness
 
 ## Background activation and meetings
 
+Dedicated meeting recording is outside current product goals. The implementation described below is present in this checkout.
+
 In Saywick, tap **Set up background dictation** to grant microphone access and
 prepare Parakeet once. Enable Live Activities in iOS Settings for Saywick. Then
 choose **Start dictation** in Shortcuts/Action Button settings. The intent uses
@@ -132,6 +133,8 @@ surface a Shortcut error and release audio resources. A recording is never resum
 automatically after a process termination or interruption.
 
 ## Saved recordings and imports
+
+Audio import remains in this checkout and is approved for removal.
 
 Open History > a recording to play audio, copy text, restore text to the keyboard,
 or **Transcribe with Parakeet**. Each run preserves earlier results and settings.
@@ -193,6 +196,8 @@ names to add. Only selected names are stored locally, with duplicates removed.
 Edit or delete entries directly in the word list.
 
 ## Verification
+
+The [engineering guide](docs/engineering.md) records product scope, release authority, and contributor guidance.
 
 ```sh
 make test
