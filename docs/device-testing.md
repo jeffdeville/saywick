@@ -10,6 +10,8 @@ When a change touches microphone capture, background recording, or keyboard hand
 
 Exercise the specific behavior the change affects, including failure or recovery when applicable. Record the build, iPhone and iOS version, steps, and observed result. If the phone check is pending, keep the affected change open.
 
+For named cleanup templates, select OpenAI, dictate two ideas in Notes and select a two-heading template between them. Verify insertion includes both ideas and the requested headings. Repeat from Polish and Off, check the next recording after success and cancellation, then test offline fallback. Switch to each Apple model and verify only the Polish toggle appears.
+
 [Return to the engineering guide](engineering.md)
 
 ## Historical Saywick history release checklist

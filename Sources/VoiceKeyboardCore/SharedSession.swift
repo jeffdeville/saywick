@@ -9,6 +9,12 @@ public enum SharedSessionPhase: String, Codable, Sendable {
     case failed
 }
 
+public struct CleanupTemplateChoice: Codable, Equatable, Sendable {
+    public var id: UUID
+    public var name: String
+    public init(id: UUID, name: String) { self.id = id; self.name = name }
+}
+
 public struct SharedSessionSnapshot: Codable, Equatable, Sendable {
     public var sessionID: UUID
     public var revision: Int
@@ -26,6 +32,10 @@ public struct SharedSessionSnapshot: Codable, Equatable, Sendable {
     public var dictation: DictationSession?
     public var acknowledgment: CommandAcknowledgment?
     public var cleanupConfigured: Bool?
+    // Only the app resolves prompt bodies. A nil catalog means no template menu.
+    public var templateChoices: [CleanupTemplateChoice]?
+    public var selectedTemplate: CleanupTemplateChoice?
+    public var templateFallback: String?
 
     public init(
         sessionID: UUID = UUID(),
@@ -82,6 +92,7 @@ public enum VoiceCommandKind: String, Codable, Sendable {
     case endSession
     case stop
     case stopAndInsert
+    case selectTemplate
     case restart
     case clear
 }
@@ -167,6 +178,7 @@ public struct VoiceCommand: Codable, Equatable, Sendable {
     public var kind: VoiceCommandKind
     public var issuedAt: Date
     public var sessionID: UUID?
+    public var templateID: UUID?
 
     public init(id: UUID = UUID(), kind: VoiceCommandKind, issuedAt: Date = Date(), sessionID: UUID? = nil) {
         self.id = id

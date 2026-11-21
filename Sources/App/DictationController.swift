@@ -54,7 +54,16 @@ final class DictationController {
     private(set) var activeTemplate: CleanupTemplate?
     private(set) var templateFallback: String?
 
+    private var authorizationGeneration = 0
+    private var selectedGeneration = 0
+    var authorizedTemplate: CleanupTemplate? {
+        selectedGeneration == authorizationGeneration ? activeTemplate : nil
+    }
+
+    func revokeTemplateAuthorization() { authorizationGeneration += 1 }
+
     func selectTemplate(_ template: CleanupTemplate?) {
+        selectedGeneration = authorizationGeneration
         activeTemplate = template
     }
 
@@ -166,6 +175,7 @@ final class DictationController {
         let token = session.generation
         let cleanupEnabled = dependencies.cleanupEnabled()
         let template = activeTemplate
+        let templateGeneration = selectedGeneration
         activeTemplate = nil
         if let template { options.instructions = template.prompt }
         if template == nil && cleanupEnabled != true {
@@ -181,7 +191,7 @@ final class DictationController {
             do {
                 let result: String
                 if let template {
-                    guard options.processor == .openAILuna, externalCleanupAuthorized() else {
+                    guard templateGeneration == authorizationGeneration, options.processor == .openAILuna, externalCleanupAuthorized() else {
                         throw PostProcessingError.openAIUnavailable
                     }
                     result = try await dependencies.applyTemplate(template.prompt, text)
@@ -347,6 +357,7 @@ final class DictationController {
     func restoreResult(_ snapshot: SharedSessionSnapshot) {
         let recovered = snapshot.phase == .failed && snapshot.dictation?.pending == nil && !snapshot.insertableText.isEmpty
         guard !isBusy, session.state == .inactive, snapshot.phase == .ready || recovered else { return }
+        templateFallback = snapshot.templateFallback
         sessionID = snapshot.sessionID; processedText = snapshot.insertableText
         if recovered {
             _ = session.send(.activate)

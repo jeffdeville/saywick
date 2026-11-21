@@ -155,6 +155,47 @@ final class DictationControllerTests: XCTestCase {
         }
     }
 
+    func testOnlyActiveOpenAIRecordingAcceptsNamedPrompt() async throws {
+        let bridge = try LocalVoiceKeyboard.SharedContainerStore(rootURL: root.appendingPathComponent("bridge"))
+        var d = dependencies()
+        var templateCalls = 0
+        d.applyTemplate = { _, text in templateCalls += 1; return text }
+        let model = AppModel(defaults: defaults, history: history, dependencies: d, bridge: bridge)
+        let template = CleanupTemplate(name: "Journal", prompt: "Add headings")
+        try model.templates.save(template)
+        for provider in [PostProcessorID.openAILuna, .foundationModels, .foundationModelsStructured] {
+            model.selectedPostProcessorID = provider
+            await model.startRecording()
+            let external = provider == .openAILuna
+            XCTAssertEqual(try bridge.readSnapshot()?.templateChoices?.first?.id, external ? template.id : nil)
+            var command = VoiceCommand(kind: .selectTemplate, sessionID: nil)
+            command.templateID = template.id
+            await model.receive(command)
+            XCTAssertNotNil(try bridge.readSnapshot()?.acknowledgment?.rejection)
+            command.id = UUID()
+            command.sessionID = model.recorder.sessionID
+            await model.receive(command)
+            await model.receive(command)
+            XCTAssertEqual(try bridge.readSnapshot()?.selectedTemplate?.id, external ? template.id : nil)
+            XCTAssertEqual(try bridge.readSnapshot()?.acknowledgment?.rejection == nil, external)
+            if external {
+                model.selectedPostProcessorID = .foundationModels
+                model.selectedPostProcessorID = .openAILuna
+                XCTAssertNil(try bridge.readSnapshot()?.selectedTemplate)
+                await model.recorder.stop()
+                XCTAssertNotNil(model.recorder.templateFallback)
+                XCTAssertEqual(templateCalls, 0)
+            } else {
+                await model.recorder.cancel()
+            }
+            XCTAssertNil(model.recorder.activeTemplate)
+            command.id = UUID()
+            await model.receive(command)
+            XCTAssertNotNil(try bridge.readSnapshot()?.acknowledgment?.rejection)
+        }
+        await model.shutdown()
+    }
+
     func testFinishInsertAndExpiryPreserveResult() async throws {
         let c = DictationController(history: history, dependencies: dependencies())
         await c.start(options: .init())
@@ -294,7 +335,7 @@ final class DictationControllerTests: XCTestCase {
         await model.shutdown()
     }
     func testCommandDeduplicationAndReceiptsDoNotRewriteSnapshot() async throws {
-        let bridge = try SharedContainerStore(rootURL: root.appendingPathComponent("bridge"))
+        let bridge = try LocalVoiceKeyboard.SharedContainerStore(rootURL: root.appendingPathComponent("bridge"))
         let snapshot = SharedSessionSnapshot(phase: .listening, updatedAt: Date(timeIntervalSince1970: 1000))
         try bridge.write(snapshot: snapshot)
         try bridge.write(receipt: .init(resultID: snapshot.sessionID, disposition: .inserted))

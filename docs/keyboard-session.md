@@ -113,6 +113,10 @@ available. Playback is cancelled before starting capture or History playback.
 Physical car and call interruption behavior requires device verification; a
 simulated notification does not establish that a particular car route is audible.
 
+## One-dictation templates
+
+During an active OpenAI recording with saved templates, tapping the cleanup control opens a scrollable list inside the keyboard. Apple models show the ordinary Polish toggle. The keyboard receives names and IDs only. The app validates the recording ID, resolves the prompt, and acknowledges the choice before the keyboard shows it as selected. Stop captures that choice for this recording. The usual Polish or Off preference survives completion, cancellation and failure. A failed template leaves a notice visible after insertion.
+
 ## Dictionary
 
 Users add correctly spelled words or phrases, one per line or through Add. Standalone

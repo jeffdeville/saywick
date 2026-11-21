@@ -41,7 +41,11 @@ final class AppModel {
 
     let selectedEngineID: SpeechEngineID = .parakeetStreaming
     var selectedPostProcessorID: PostProcessorID {
-        didSet { defaults.set(selectedPostProcessorID.rawValue, forKey: Keys.processor) }
+        didSet {
+            if oldValue == .openAILuna && selectedPostProcessorID != .openAILuna { recorder.revokeTemplateAuthorization() }
+            defaults.set(selectedPostProcessorID.rawValue, forKey: Keys.processor)
+            publishSnapshot()
+        }
     }
     var customCleanupInstructions: String {
         didSet { defaults.set(customCleanupInstructions, forKey: Keys.cleanupInstructions) }
@@ -196,6 +200,8 @@ final class AppModel {
         else if command.sessionID != nil && command.sessionID != recorder.sessionID { rejection = "Recording changed. Try again." }
         else {
             switch command.kind {
+            case .selectTemplate:
+                rejection = applyTemplateChoice(command)
             case .start: rejection = recorder.session.state == .activated && !isBusy ? nil : "Microphone is not ready."
             case .stop, .stopAndInsert: rejection = canStop ? nil : "No recording to stop."
             case .cancel, .restart: rejection = canStop ? nil : "No dictation to cancel."
@@ -211,6 +217,7 @@ final class AppModel {
         // Awaited by this command task: only one accepted keyboard command executes at a time.
         // Independent audio observers can still invalidate the recording during any suspension.
         switch command.kind {
+        case .selectTemplate: break // Already applied together with its acknowledgment.
         case .start: await startRecording()
         case .stop: await recorder.stop()
         case .stopAndInsert: await recorder.stop(insert: true)
@@ -220,6 +227,25 @@ final class AppModel {
         case .endSession: await recorder.end()
         }
     }
+    private var allowsTemplateSelection: Bool {
+        recorder.canStop && recorder.options.processor == .openAILuna && selectedPostProcessorID == .openAILuna
+    }
+
+    private func applyTemplateChoice(_ command: VoiceCommand) -> String? {
+        guard command.sessionID == recorder.sessionID, allowsTemplateSelection else {
+            return "The recording or cleanup provider changed."
+        }
+        if let id = command.templateID {
+            guard let template = templates.items.first(where: { $0.id == id }) else {
+                return "This template is no longer available."
+            }
+            recorder.selectTemplate(template)
+        } else {
+            recorder.selectTemplate(nil)
+        }
+        return nil
+    }
+
     private func publishSnapshot() {
         revision += 1
         var snapshot = SharedSessionSnapshot(sessionID: recorder.sessionID, revision: revision, phase: phase,
@@ -230,6 +256,11 @@ final class AppModel {
             isMeeting: false)
         snapshot.dictation = recorder.session; snapshot.acknowledgment = acknowledgment
         snapshot.cleanupConfigured = (recorder.canStop ? recorder.options.processor : selectedPostProcessorID) != .none
+        if allowsTemplateSelection {
+            snapshot.templateChoices = templates.items.map { CleanupTemplateChoice(id: $0.id, name: $0.name) }
+            snapshot.selectedTemplate = recorder.authorizedTemplate.map { CleanupTemplateChoice(id: $0.id, name: $0.name) }
+        }
+        snapshot.templateFallback = recorder.templateFallback
         do { try sharedStore?.write(snapshot: snapshot) }
         catch { DiagnosticLog.error("bridge.publish", error); bridgeMessage = error.localizedDescription }
     }

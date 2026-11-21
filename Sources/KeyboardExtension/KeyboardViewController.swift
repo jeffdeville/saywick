@@ -38,6 +38,9 @@ class KeyboardViewController: UIInputViewController {
     private var showsTranscript = false
     private var isListeningLayout = false
     private let typingPanel = UIStackView()
+    private let templateMenu = UIScrollView()
+    private let templateRows = UIStackView()
+    private var templateHeight: NSLayoutConstraint?
     private let morePanel = UIStackView()
     private var keyboardHeight: NSLayoutConstraint?
     private var launchController: UIHostingController<KeyboardAppLink>?
@@ -71,6 +74,7 @@ class KeyboardViewController: UIInputViewController {
         symbols = false; alternateSymbols = false; uppercase = false
         rebuildKeys()
         morePanel.isHidden = true
+        templateMenu.isHidden = true
         publishPresence(visible: true, force: true)
         refreshSnapshot()
         timer?.invalidate()
@@ -271,7 +275,22 @@ class KeyboardViewController: UIInputViewController {
         globeWidth.priority = .init(999); globeWidth.isActive = true
         rebuildKeys()
 
-        [controlBar, statusLabel, voicePanel, insertButton, typingPanel, correction.view!, morePanel].forEach { rootStack.addArrangedSubview($0) }
+        templateMenu.isHidden = true
+        templateRows.axis = .vertical
+        templateRows.translatesAutoresizingMaskIntoConstraints = false
+        templateMenu.addSubview(templateRows)
+        let content = templateMenu.contentLayoutGuide
+        NSLayoutConstraint.activate([
+            templateRows.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            templateRows.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            templateRows.topAnchor.constraint(equalTo: content.topAnchor),
+            templateRows.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+            templateRows.widthAnchor.constraint(equalTo: templateMenu.frameLayoutGuide.widthAnchor)
+        ])
+        templateHeight = templateMenu.heightAnchor.constraint(equalToConstant: 88)
+        templateHeight?.priority = .init(999)
+        templateHeight?.isActive = true
+        [controlBar, statusLabel, voicePanel, templateMenu, insertButton, typingPanel, correction.view!, morePanel].forEach { rootStack.addArrangedSubview($0) }
         rootStack.axis = .vertical
         rootStack.spacing = 8
         rootStack.translatesAutoresizingMaskIntoConstraints = false
@@ -302,7 +321,7 @@ class KeyboardViewController: UIInputViewController {
         menuButton.isHidden = active
         undoButton.isHidden = active
         cancelButton.isHidden = !isListeningLayout
-        statusLabel.isHidden = !staleRecording && !result && activationFailure == nil && pendingAction == nil
+        statusLabel.isHidden = snapshot?.templateFallback == nil && !staleRecording && !result && activationFailure == nil && pendingAction == nil
             && snapshot?.phase != .failed && state != .starting && state != .finishing
         if active { morePanel.isHidden = true }
         // Move the same controls, keeping their targets/settings synchronized.
@@ -320,7 +339,7 @@ class KeyboardViewController: UIInputViewController {
     private func updateKeyboardHeight() {
         let extras = (morePanel.isHidden ? 0 : 46) + (statusLabel.isHidden ? 0 : 38)
             + (correctionController?.view.isHidden == false ? 38 : 0)
-        keyboardHeight?.constant = CGFloat(showsTranscript ? 250 : 274) + CGFloat(extras)
+        keyboardHeight?.constant = CGFloat(showsTranscript ? 250 : 274) + CGFloat(extras) + (templateMenu.isHidden ? 0 : (templateHeight?.constant ?? 0) + 8)
         sideConstraints.first?.constant = showsTranscript ? 12 : 6
         sideConstraints.last?.constant = showsTranscript ? -12 : -6
     }
@@ -461,6 +480,18 @@ class KeyboardViewController: UIInputViewController {
         do {
             if hasFullAccess, store == nil { store = try SharedContainerStore() }
             let snapshot = hasFullAccess ? try store?.readSnapshot() : nil
+            let state = KeyboardRecordingState.resolve(snapshot, fullAccess: hasFullAccess)
+            if state != .recording || currentSnapshot?.sessionID != snapshot?.sessionID
+                || currentSnapshot?.templateChoices != snapshot?.templateChoices
+                || currentSnapshot?.selectedTemplate != snapshot?.selectedTemplate {
+                templateMenu.isHidden = true
+            }
+            if pendingAction == nil, state == .recording, let snapshot,
+               let outstanding = try store?.readCommand(), outstanding.kind == .selectTemplate,
+               outstanding.sessionID == snapshot.sessionID, snapshot.acknowledgment?.id != outstanding.id,
+               abs(outstanding.issuedAt.timeIntervalSinceNow) < 10 {
+                pendingAction = PendingKeyboardCommand(command: outstanding, sentAt: outstanding.issuedAt)
+            }
             currentSnapshot = snapshot
             let receipt = try snapshot.flatMap { try store?.readReceipt($0.sessionID) }
             let consumed = snapshot.map { hasInserted($0.sessionID) } == true || receipt != nil
@@ -468,15 +499,18 @@ class KeyboardViewController: UIInputViewController {
                 && !(snapshot?.insertableText.isEmpty ?? true) && !consumed
             let enabled = try store?.cleanupEnabled() ?? true
             let configured = snapshot?.cleanupConfigured != false
-            let polished = enabled && configured
+            let hasMenu = state == .recording && !(snapshot?.templateChoices?.isEmpty ?? true)
+            let selected = hasMenu ? snapshot?.selectedTemplate : nil
+            let polished = selected != nil || (enabled && configured)
             var polish = UIButton.Configuration.plain()
             polish.baseForegroundColor = polished ? .systemBlue : .secondaryLabel
             polish.background.backgroundColor = polished ? UIColor.systemBlue.withAlphaComponent(0.14) : .clear
             polish.background.cornerRadius = 22
             polish.background.strokeColor = polished ? .clear : .separator
             polish.background.strokeWidth = polished ? 0 : 1
-            polish.title = "Polish"
-            polish.image = UIImage(systemName: "sparkles")
+            polish.title = selected?.name ?? (hasMenu && !enabled ? "Off" : "Polish")
+            polish.titleLineBreakMode = .byTruncatingTail
+            polish.image = UIImage(systemName: hasMenu ? "chevron.down" : "sparkles")
             polish.imagePadding = 4
             cleanupButton.configuration = polish
             cleanupButton.accessibilityLabel = "Polish"
@@ -484,11 +518,16 @@ class KeyboardViewController: UIInputViewController {
             cleanupButton.accessibilityHint = configured ? "Toggles text cleanup for this dictation" : "Choose a cleanup method in Saywick"
             cleanupButton.accessibilityTraits = polished ? [.button, .selected] : [.button]
             cleanupButton.isEnabled = hasFullAccess && store != nil && configured
-            let state = KeyboardRecordingState.resolve(snapshot, fullAccess: hasFullAccess)
+            if hasMenu {
+                cleanupButton.accessibilityLabel = "Cleanup choices"
+                cleanupButton.accessibilityValue = selected?.name ?? (enabled ? "Polish" : "Off")
+                cleanupButton.accessibilityHint = "Choose a template for this recording"
+            }
             if let pending = pendingAction, snapshot?.acknowledgment?.id == pending.command.id {
                 activationFailure = snapshot?.acknowledgment?.rejection
                 pendingAction = nil
             }
+            cleanupButton.isEnabled = cleanupButton.isEnabled && pendingAction == nil
             let needsLaunch = state == .activationNeeded && hasFullAccess
             launchController?.view.isHidden = !needsLaunch
             launchController?.view.isUserInteractionEnabled = !hasRecovery
@@ -514,6 +553,8 @@ class KeyboardViewController: UIInputViewController {
             case .ready: statusLabel.text = "Ready to dictate · microphone active"
             default: statusLabel.text = snapshot?.message
             }
+            if let rejection = activationFailure { statusLabel.text = rejection }
+            if let notice = snapshot?.templateFallback { statusLabel.text = notice }
             if let pending = pendingAction {
                 statusLabel.text = pending.timedOut(at: Date()) ? "Recorder did not acknowledge. Tap again to retry." : "Waiting for recorder…"
             }
@@ -552,9 +593,56 @@ class KeyboardViewController: UIInputViewController {
     @objc private func toggleCleanup() {
         do {
             guard let store else { return }
+            if KeyboardRecordingState.resolve(currentSnapshot, fullAccess: hasFullAccess) == .recording,
+               let snapshot = currentSnapshot, let choices = snapshot.templateChoices, !choices.isEmpty {
+                if templateMenu.isHidden { showTemplateMenu(snapshot, choices: choices, enabled: try store.cleanupEnabled()) }
+                else { templateMenu.isHidden = true; updateKeyboardHeight() }
+                return
+            }
             try store.setCleanupEnabled(!store.cleanupEnabled())
             refreshSnapshot()
         } catch { statusLabel.text = "Could not change cleanup: \(error.localizedDescription)" }
+    }
+
+    private func showTemplateMenu(_ snapshot: SharedSessionSnapshot, choices: [CleanupTemplateChoice], enabled: Bool) {
+        for row in templateRows.arrangedSubviews { row.removeFromSuperview() }
+        func addRow(_ title: String, selected: Bool = false, action: @escaping () -> Void) {
+            let button = UIButton(type: .system)
+            button.configuration = .plain()
+            button.configuration?.title = title
+            button.configuration?.image = selected ? UIImage(systemName: "checkmark") : nil
+            button.configuration?.imagePadding = 6
+            button.contentHorizontalAlignment = .leading
+            button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+            if selected { button.accessibilityTraits.insert(.selected) }
+            button.addAction(UIAction { [weak self] _ in
+                guard let self else { return }
+                templateMenu.isHidden = true
+                guard currentSnapshot?.sessionID == snapshot.sessionID else { refreshSnapshot(); return }
+                action()
+                refreshSnapshot()
+            }, for: .touchUpInside)
+            templateRows.addArrangedSubview(button)
+        }
+        if snapshot.selectedTemplate != nil {
+            addRow(enabled ? "Use regular Polish" : "Use Off") { [weak self] in
+                self?.send(.selectTemplate, status: "Restoring usual cleanup…")
+            }
+        } else {
+            addRow(enabled ? "Turn Polish off" : "Turn Polish on") { [weak self] in
+                do { try self?.store?.setCleanupEnabled(!enabled) }
+                catch { self?.activationFailure = "Could not change Polish." }
+            }
+        }
+        for choice in choices {
+            addRow(choice.name, selected: choice.id == snapshot.selectedTemplate?.id) { [weak self] in
+                self?.send(.selectTemplate, status: "Selecting template…", templateID: choice.id)
+            }
+        }
+        templateHeight?.constant = CGFloat(min(3, templateRows.arrangedSubviews.count)) * 44
+        templateMenu.setContentOffset(.zero, animated: false)
+        templateMenu.isHidden = false
+        updateKeyboardHeight()
     }
 
     @objc private func stopAndInsert() {
@@ -603,9 +691,10 @@ class KeyboardViewController: UIInputViewController {
         } catch { DiagnosticLog.error("keyboard.operation", error); statusLabel.text = error.localizedDescription }
     }
 
-    private func send(_ command: VoiceCommandKind, status: String) {
+    private func send(_ command: VoiceCommandKind, status: String, templateID: UUID? = nil) {
         guard pendingAction == nil else { return }
-        let request = VoiceCommand(kind: command, sessionID: command == .endSession ? nil : currentSnapshot?.sessionID)
+        var request = VoiceCommand(kind: command, sessionID: command == .endSession ? nil : currentSnapshot?.sessionID)
+        request.templateID = templateID
         do {
             try store?.write(command: request)
             pendingAction = PendingKeyboardCommand(command: request)

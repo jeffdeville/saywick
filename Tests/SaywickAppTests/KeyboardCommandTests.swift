@@ -101,6 +101,50 @@ import VoiceKeyboardCore
         XCTAssertFalse(try bridge.cleanupEnabled())
         XCTAssertEqual(try button("Polish", k.view).accessibilityValue, "Off")
     }
+    func testTemplateDropdownReturnsToPlainPolishWhenCapabilityDisappears() throws {
+        let choice = CleanupTemplateChoice(id: UUID(), name: "Journaling")
+        var snapshot = SharedSessionSnapshot(phase: .listening, keyboardSessionActive: true)
+        snapshot.cleanupConfigured = true
+        snapshot.templateChoices = [choice]
+        try bridge.write(snapshot: snapshot)
+        let k = keyboard()
+        try button("Cleanup choices", k.view).sendActions(for: .touchUpInside)
+        try button("Journaling", k.view).sendActions(for: .touchUpInside)
+        let command = try XCTUnwrap(bridge.readCommand())
+        let reopened = keyboard()
+        XCTAssertFalse(try button("Stop and insert", reopened.view).isEnabled)
+        try button("Stop and insert", reopened.view).sendActions(for: .touchUpInside)
+        XCTAssertEqual(try bridge.readCommand()?.id, command.id)
+        XCTAssertEqual(command.templateID, choice.id)
+        XCTAssertEqual(command.sessionID, snapshot.sessionID)
+        snapshot.selectedTemplate = choice
+        snapshot.acknowledgment = .init(id: command.id)
+        try bridge.write(snapshot: snapshot); refresh(k)
+        XCTAssertEqual(try button("Cleanup choices", k.view).accessibilityValue, "Journaling")
+        snapshot.templateChoices = nil
+        snapshot.selectedTemplate = nil
+        try bridge.write(snapshot: snapshot); refresh(k)
+        XCTAssertThrowsError(try button("Cleanup choices", k.view))
+        try button("Polish", k.view).sendActions(for: .touchUpInside)
+        XCTAssertFalse(try bridge.cleanupEnabled())
+    }
+
+    func testMultilineInsertionRetainsFallbackDisclosureAfterReceipt() throws {
+        let text = "Morning\n\nI walked to work."
+        var snapshot = SharedSessionSnapshot(phase: .ready, processedText: text, shouldAutoInsert: true)
+        snapshot.templateFallback = "Template unavailable · local cleanup used"
+        try bridge.write(snapshot: snapshot)
+        let k = keyboard()
+        refresh(k)
+        XCTAssertTrue(k.document.text.hasSuffix(text))
+        XCTAssertEqual(try bridge.readReceipt(snapshot.sessionID)?.disposition, .inserted)
+        func visibleNotice(_ view: UIView) -> Bool {
+            guard !view.isHidden else { return false }
+            if let label = view as? UILabel, label.text == snapshot.templateFallback { return true }
+            return view.subviews.contains(where: visibleNotice)
+        }
+        XCTAssertTrue(visibleNotice(k.view))
+    }
     func testStartWaitsForExplicitAcknowledgmentAndCancelUsesSameBridge() throws {
         var snapshot = SharedSessionSnapshot(phase: .ready, updatedAt: Date(), keyboardSessionActive: true)
         try bridge.write(snapshot: snapshot)

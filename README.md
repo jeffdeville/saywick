@@ -81,7 +81,7 @@ the destination app. Each dictation has its own transcript and History entry.
 The keyboard opens with QWERTY keys and a toolbar containing More, Undo insertion,
 **Polish**, and the mic. **123** opens symbols. Active dictation and unfinished results
 show the transcript; insertion returns to typing with **Fix a word** available.
-Polish toggles cleanup. When the microphone is inactive, tapping the mic
+With either Apple model, Polish toggles cleanup. During OpenAI dictation, saved templates appear in the cleanup dropdown. When the microphone is inactive, tapping the mic
 requests a URL handoff to activate it in Saywick. If iOS rejects the
 request, inline instructions explain the Shortcut fallback. More expands inline.
 
@@ -131,7 +131,7 @@ Recordings imported by earlier versions remain available in History under the us
 
 ## Named cleanup templates
 
-With OpenAI selected in Pipeline, open **Cleanup templates** to save a name and a prompt. A template can reorganize the completed dictation, add headings or summarize it. Regular Polish continues to preserve wording. Custom prompts and transcript text go to the selected OpenAI endpoint using your key.
+With OpenAI selected in Pipeline, open **Cleanup templates** to save a name and a prompt. While speaking, tap the cleanup dropdown and choose a template. Keep speaking and stop normally. The template applies to the full recording, including anything said before selection. Your next recording starts with your usual Polish or Off setting. If the request fails, the keyboard reports local cleanup and preserves usable text. A template can reorganize the completed dictation, add headings or summarize it. Regular Polish continues to preserve wording. Custom prompts and transcript text go to the selected OpenAI endpoint using your key.
 
 ## Final text cleanup
 
