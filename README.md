@@ -74,7 +74,9 @@ choose its own identifiers before the first public release.
 
 ## Everyday dictation
 
-Keep keyboard ready is enabled by default. Start listening in Saywick once, then
+Opening Saywick from its icon shows **Dictate → Start dictation**. The keyboard microphone and the configured Action Button start dictation immediately after setup. Open the gear on Dictate for Settings, or tap History to search saved recordings.
+
+Keep microphone ready is enabled by default. Start dictation in Saywick once, then
 switch to the destination app and select the Saywick keyboard. Tap the **stop icon**
 to finish and insert that dictation, then the **mic icon** for the next one without leaving
 the destination app. Each dictation has its own transcript and History entry.
@@ -131,13 +133,12 @@ Recordings imported by earlier versions remain available in History under the us
 
 ## Named cleanup templates
 
-With OpenAI selected in Pipeline, open **Cleanup templates** to save a name and a prompt. While speaking, tap the cleanup dropdown and choose a template. Keep speaking and stop normally. The template applies to the full recording, including anything said before selection. Your next recording starts with your usual Polish or Off setting. If the request fails, the keyboard reports local cleanup and preserves usable text. A template can reorganize the completed dictation, add headings or summarize it. Regular Polish continues to preserve wording. Custom prompts and transcript text go to the selected OpenAI endpoint using your key.
+Choose OpenAI in **Settings → Text cleanup**, then open **Settings → Templates** to save a name and prompt. Each template can use your default model from **OpenAI connection** or specify an exact Chat Completions model ID. Existing templates inherit the default. Regular Polish retains its own model. While speaking, tap the cleanup dropdown and choose a template. Keep speaking and stop normally. The template applies to the full recording, including anything said before selection. Your next recording starts with your usual Polish or Off setting. If the request fails, the keyboard reports local cleanup and preserves usable text. A template can reorganize the completed dictation, add headings or summarize it. Regular Polish continues to preserve wording. Custom prompts and transcript text go to the selected OpenAI endpoint using your key.
 
 ## Final text cleanup
 
 Live text is a draft. Speech engines may interpret a thinking pause as a sentence
-boundary; Saywick preserves that original output in History. Choose **Faithful
-cleanup (Apple Intelligence)** to repair punctuation and capitalization after Stop,
+boundary; Saywick preserves that original output in History. Choose **Settings → Text cleanup → Apple → Sentences** to repair punctuation and capitalization after Stop,
 using the surrounding words to reconsider those boundaries. Upgrades should preserve your saved cleanup choice, including Off.
 A known upgrade issue can switch Off to Faithful once if your installation went through an earlier cleanup migration. Raw and Fast
 local rules do not perform semantic repair.
@@ -164,12 +165,7 @@ pending comparisons on the same recorded audio.
 
 ## Custom words
 
-One entry per line, saved automatically:
-
-```text
-Brecken = Breccan
-Breccan
-```
+Open **Settings → My words**. Use **Add word** for a preferred spelling such as Breccan. Use **Add replacement** to map a specific recognition error such as Brecken to Breccan. Tap an entry to edit it, or swipe to delete it.
 
 Standalone words use conservative local spelling/sound matching, including short
 word splits such as `say wick` → `Saywick`. Ambiguous candidates stay unchanged;

@@ -7,8 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		06E75A1CC230CEC70E1B974A /* PrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F89CA339FAD10BEE1E2300D /* PrivacySettings.swift */; };
 		070C1FF7FAB9E1601A013A8D /* SharedContainerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFB9DD2854EC941D0FD6556 /* SharedContainerStore.swift */; };
 		081B5A1B2B2AB9ABA063CBB5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 311C3C5FA8447B53E84A799A /* PrivacyInfo.xcprivacy */; };
+		0BF68C1A0BF111D3E7101AA6 /* MyWordsSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2A3A635A87C75C1A478344 /* MyWordsSettings.swift */; };
 		0CC2F258C85EC949A07A6A78 /* ParakeetDeviceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 684FC3FD5ABAD45C7A645A0C /* ParakeetDeviceTests.swift */; };
 		14158754D162ADF52EEB4782 /* MicrophoneSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10668027699F7EE41FC3A84E /* MicrophoneSessionTests.swift */; };
 		17A9F745CBBE4E208388224D /* SaywickActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24359AF657262E1272CED75 /* SaywickActivityAttributes.swift */; };
@@ -38,6 +40,7 @@
 		50E49238DDC8AD63B5876D67 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16F48D0C066B778C0A1EBB5B /* ContentView.swift */; };
 		5B18FC9BD01C6B7F2982CF4C /* VoiceKeyboardCore in Frameworks */ = {isa = PBXBuildFile; productRef = ADD1935DA754A8AA5761ECFF /* VoiceKeyboardCore */; };
 		5F2C4DF5710B6DC337349F11 /* TranscriptPostProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BB5955F4FF7F4A75BADEFAF /* TranscriptPostProcessor.swift */; };
+		6318B16BBEFC3799D6FBC411 /* DictateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1FB6900741FBF833D2FC534 /* DictateView.swift */; };
 		651004C87D822D55D97A5105 /* LocalVoice.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BE99E44F562EA8A68DE1AC4D /* LocalVoice.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		71BA49CA6EFF0834F4F19990 /* AudioArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2002FD6FF9430DA963512EE /* AudioArchive.swift */; };
 		760162998AD5E373B477DAA9 /* SharedContainerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFB9DD2854EC941D0FD6556 /* SharedContainerStore.swift */; };
@@ -65,8 +68,10 @@
 		DBF451F3F56E68115655EFBB /* HistoryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CB38139D1AA0D3F58532314 /* HistoryModel.swift */; };
 		E0F6677AA6741EDFC145F041 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D469A610E264AD8B89EB12F /* DiagnosticLog.swift */; };
 		E156BAF1AFF5B729C8AFC0A3 /* CleanupTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 214A706B227C6C4CFA78DE37 /* CleanupTemplates.swift */; };
+		E5B65635EBAC91DDE17138FE /* SaywickSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 307CD47A9468C45BC98797C4 /* SaywickSettings.swift */; };
 		E61F2ED22F046885B833256A /* LocalVoiceKeyboardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D533136756B5A1E77668B7 /* LocalVoiceKeyboardUITests.swift */; };
 		E6C3D5292AE27014C769680D /* KeyboardCommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DEB5878BB692DB591FB2ABA /* KeyboardCommandTests.swift */; };
+		E86B3109C94A3D27EC8E2F50 /* OpenAISettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0569FA59A95F3745BEBC0A76 /* OpenAISettings.swift */; };
 		F182C2EEB837875878528B9D /* AppleDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF518CCB2DDA3C9AFA8D42FB /* AppleDiagnostics.swift */; };
 		F5C0C3415E2D728D94EC2649 /* CleanupTemplateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35DBE030CE0E588474A94248 /* CleanupTemplateTests.swift */; };
 		F63B537D03A0C9351FBD1969 /* SaywickStatus.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 357D0D7F51DDEDA52F06CED6 /* SaywickStatus.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -121,6 +126,7 @@
 /* Begin PBXFileReference section */
 		0186AB2B51E0412EC2AC97B0 /* StopSaywickRecording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StopSaywickRecording.swift; sourceTree = "<group>"; };
 		01A7A98734CC210176794E68 /* MicrophoneCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophoneCapture.swift; sourceTree = "<group>"; };
+		0569FA59A95F3745BEBC0A76 /* OpenAISettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAISettings.swift; sourceTree = "<group>"; };
 		0696A8889F46FA2ACD7FA7F2 /* RecordingErrorSound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingErrorSound.swift; sourceTree = "<group>"; };
 		0CB38139D1AA0D3F58532314 /* HistoryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryModel.swift; sourceTree = "<group>"; };
 		10668027699F7EE41FC3A84E /* MicrophoneSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophoneSessionTests.swift; sourceTree = "<group>"; };
@@ -132,6 +138,8 @@
 		22B13E1441278C5EF0779F47 /* RecordingActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingActivity.swift; sourceTree = "<group>"; };
 		25E51046EC6AFC5FBD2BD9D7 /* KeyboardHandoffDeviceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHandoffDeviceTests.swift; sourceTree = "<group>"; };
 		2938A16A02555A1EBA32957F /* ParakeetSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetSpeechEngine.swift; sourceTree = "<group>"; };
+		2F89CA339FAD10BEE1E2300D /* PrivacySettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacySettings.swift; sourceTree = "<group>"; };
+		307CD47A9468C45BC98797C4 /* SaywickSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaywickSettings.swift; sourceTree = "<group>"; };
 		311C3C5FA8447B53E84A799A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		32DC307396E107EBAE888CC2 /* LiveSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveSpeechEngine.swift; sourceTree = "<group>"; };
 		357D0D7F51DDEDA52F06CED6 /* SaywickStatus.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = SaywickStatus.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -159,6 +167,7 @@
 		9CEA115C0BBB7DE079C4F0AE /* ios_kb */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ios_kb; path = .; sourceTree = SOURCE_ROOT; };
 		9DEB5878BB692DB591FB2ABA /* KeyboardCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardCommandTests.swift; sourceTree = "<group>"; };
 		A63E669DBA875ACF94AF0347 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		AB2A3A635A87C75C1A478344 /* MyWordsSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyWordsSettings.swift; sourceTree = "<group>"; };
 		AE8FD0155EC3A6DFF4616CD8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B8B946AEF564243F9A7A3140 /* DiagnosticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsTests.swift; sourceTree = "<group>"; };
 		BE99E44F562EA8A68DE1AC4D /* LocalVoice.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = LocalVoice.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -168,6 +177,7 @@
 		D24359AF657262E1272CED75 /* SaywickActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaywickActivityAttributes.swift; sourceTree = "<group>"; };
 		DA70C5A197558E325FBE7D52 /* DictationControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationControllerTests.swift; sourceTree = "<group>"; };
 		DFFA53ED067B89DC8C92E84A /* ParakeetWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetWorker.swift; sourceTree = "<group>"; };
+		E1FB6900741FBF833D2FC534 /* DictateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictateView.swift; sourceTree = "<group>"; };
 		E2002FD6FF9430DA963512EE /* AudioArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioArchive.swift; sourceTree = "<group>"; };
 		EB3E9B452E869CB0CD8BC622 /* ModelDownloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDownloadTests.swift; sourceTree = "<group>"; };
 		ECD3D267257E9E9F2AA68585 /* LocalVoiceKeyboardUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LocalVoiceKeyboardUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -331,7 +341,12 @@
 				214A706B227C6C4CFA78DE37 /* CleanupTemplates.swift */,
 				38AA830E18686A3328246E89 /* ContactWordsPicker.swift */,
 				16F48D0C066B778C0A1EBB5B /* ContentView.swift */,
+				E1FB6900741FBF833D2FC534 /* DictateView.swift */,
 				758EAF0B3DA0081B8DC21E90 /* HistoryView.swift */,
+				AB2A3A635A87C75C1A478344 /* MyWordsSettings.swift */,
+				0569FA59A95F3745BEBC0A76 /* OpenAISettings.swift */,
+				2F89CA339FAD10BEE1E2300D /* PrivacySettings.swift */,
+				307CD47A9468C45BC98797C4 /* SaywickSettings.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -488,7 +503,7 @@
 					5020AFFF60B5BE4009505F87 = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
-						SystemCapabilities = "[\"com.apple.ApplicationGroups.iOS\": [\"enabled\": 1], \"com.apple.BackgroundModes\": [\"enabled\": 1]]";
+						SystemCapabilities = "[\"com.apple.BackgroundModes\": [\"enabled\": 1], \"com.apple.ApplicationGroups.iOS\": [\"enabled\": 1]]";
 					};
 					72F7BEC905982E497B096DB3 = {
 						DevelopmentTeam = "";
@@ -603,18 +618,23 @@
 				2A2115D4D4335702C1C51E06 /* ContactWordsPicker.swift in Sources */,
 				50E49238DDC8AD63B5876D67 /* ContentView.swift in Sources */,
 				4911BE50D73A3429E88E079B /* DiagnosticLog.swift in Sources */,
+				6318B16BBEFC3799D6FBC411 /* DictateView.swift in Sources */,
 				50204CAAC06D1415B447632A /* DictationController.swift in Sources */,
 				DBF451F3F56E68115655EFBB /* HistoryModel.swift in Sources */,
 				CA43F52962D0BA6D9A86BAD7 /* HistoryView.swift in Sources */,
 				343A91BB25887DB49FC67882 /* LiveSpeechEngine.swift in Sources */,
 				2766FD32F9D27813E9CE3A34 /* LocalVoiceKeyboardApp.swift in Sources */,
 				45DD58648652E081DF44F7B3 /* MicrophoneCapture.swift in Sources */,
+				0BF68C1A0BF111D3E7101AA6 /* MyWordsSettings.swift in Sources */,
+				E86B3109C94A3D27EC8E2F50 /* OpenAISettings.swift in Sources */,
 				209BF85FFA39BAC02359F397 /* ParakeetModelStore.swift in Sources */,
 				28B16608A7B7507FD517FC37 /* ParakeetSpeechEngine.swift in Sources */,
 				773938CFEAD6E49DD822AE4D /* ParakeetWorker.swift in Sources */,
+				06E75A1CC230CEC70E1B974A /* PrivacySettings.swift in Sources */,
 				8275C244C9A0569950349B9B /* RecordingActivity.swift in Sources */,
 				D75711658486EE45812FFB29 /* RecordingErrorSound.swift in Sources */,
 				17A9F745CBBE4E208388224D /* SaywickActivityAttributes.swift in Sources */,
+				E5B65635EBAC91DDE17138FE /* SaywickSettings.swift in Sources */,
 				881D5343202FC130F7F0D8D3 /* SaywickShortcuts.swift in Sources */,
 				070C1FF7FAB9E1601A013A8D /* SharedContainerStore.swift in Sources */,
 				C1CB30EE5AB2A6071D0F5D45 /* SimulatorSpeechEngine.swift in Sources */,
@@ -722,7 +742,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -842,7 +862,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

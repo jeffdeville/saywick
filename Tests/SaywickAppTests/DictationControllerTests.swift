@@ -95,7 +95,7 @@ final class DictationControllerTests: XCTestCase {
         var calls = 0
         var d = dependencies()
         d.cleanupEnabled = { false }
-        d.applyTemplate = { prompt, text in
+        d.applyTemplate = { prompt, text, _ in
             calls += 1
             XCTAssertEqual(prompt, "Group by day")
             XCTAssertTrue(text.contains("morning"))
@@ -132,7 +132,7 @@ final class DictationControllerTests: XCTestCase {
             var requests = 0
             var d = dependencies()
             d.cleanupEnabled = { false }
-            d.applyTemplate = { _, _ in
+            d.applyTemplate = { _, _, _ in
                 requests += 1
                 throw PostProcessingError.openAIUnavailable
             }
@@ -155,11 +155,37 @@ final class DictationControllerTests: XCTestCase {
         }
     }
 
+    func testOneDictationUsesSelectedModelEvenIfDefaultChanges() async throws {
+        var d = dependencies()
+        var requested: [String] = []
+        d.applyTemplate = { _, text, model in requested.append(model); return text }
+        let model = AppModel(defaults: defaults, history: history, dependencies: d)
+        model.selectedPostProcessorID = .openAILuna
+        var item = CleanupTemplate(name: "Journal", prompt: "Include every item")
+        for override in [nil, "journal-model"] as [String?] {
+            item.modelID = override
+            try model.templates.save(item)
+            model.defaultTemplateModel = "account-model"
+            model.selectedTab = 1
+            await model.handleOpenURL(URL(string: "saywick://start?source=keyboard")!)
+            XCTAssertEqual(model.selectedTab, 0)
+            XCTAssertTrue(model.keyboardOrigin)
+            var choice = VoiceCommand(kind: .selectTemplate, sessionID: model.recorder.sessionID)
+            choice.templateID = item.id
+            await model.receive(choice)
+            model.defaultTemplateModel = "changed-after-selection"
+            await model.stopRecording()
+            XCTAssertEqual(requested.last, override ?? "account-model")
+            XCTAssertEqual(history.entries.first(where: { $0.id == model.recorder.sessionID })?.runs.first?.cleanupModelID, requested.last)
+        }
+        await model.shutdown()
+    }
+
     func testOnlyActiveOpenAIRecordingAcceptsNamedPrompt() async throws {
         let bridge = try LocalVoiceKeyboard.SharedContainerStore(rootURL: root.appendingPathComponent("bridge"))
         var d = dependencies()
         var templateCalls = 0
-        d.applyTemplate = { _, text in templateCalls += 1; return text }
+        d.applyTemplate = { _, text, _ in templateCalls += 1; return text }
         let model = AppModel(defaults: defaults, history: history, dependencies: d, bridge: bridge)
         let template = CleanupTemplate(name: "Journal", prompt: "Add headings")
         try model.templates.save(template)

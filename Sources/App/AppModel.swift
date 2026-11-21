@@ -13,6 +13,14 @@ final class AppModel {
     var correctionContext: VocabularyCorrectionContext?
     var correctionError: String?
     var selectedTab = 0
+    var recorderNavigation = UUID()
+    private(set) var keyboardOrigin = false
+    var currentResultSession: UUID? { recorder.currentResultSession }
+    private(set) var keyboardVerified: Bool
+    var defaultTemplateModel: String {
+        didSet { defaults.set(defaultTemplateModel, forKey: "defaultTemplateModel") }
+    }
+    func showRecorder() { selectedTab = 0; recorderNavigation = UUID() }
     var keepKeyboardReady: Bool { didSet { defaults.set(keepKeyboardReady, forKey: "keepKeyboardReady") } }
     var bridgeMessage = "Checking keyboard bridge…"
     @ObservationIgnored private let defaults: UserDefaults
@@ -58,6 +66,8 @@ final class AppModel {
     }
 
     init(defaults: UserDefaults = .standard, history: HistoryModel? = nil, dependencies: DictationController.Dependencies = .init(), bridge: SharedContainerStore? = nil) {
+        self.keyboardVerified = defaults.bool(forKey: "keyboardInsertionVerified")
+        self.defaultTemplateModel = defaults.string(forKey: "defaultTemplateModel") ?? TranscriptPostProcessor.standardModel
         self.templates = CleanupTemplates(defaults: defaults)
         self.servicesEnabled = dependencies.activities
         let history = history ?? HistoryModel(defaults: defaults)
@@ -93,7 +103,10 @@ final class AppModel {
         do {
             self.sharedStore = defaults === UserDefaults.standard ? try bridge ?? SharedContainerStore() : bridge
 
-            if let snapshot = try self.sharedStore?.readSnapshot() { recorder.restoreResult(snapshot) }
+            if let snapshot = try self.sharedStore?.readSnapshot() {
+                let receipt = try self.sharedStore?.readReceipt(snapshot.sessionID)
+                recorder.restoreResult(snapshot, showResult: receipt == nil)
+            }
             self.bridgeMessage = "Keyboard bridge ready"
         } catch {
             DiagnosticLog.error("bridge.initialize", error)
@@ -120,9 +133,10 @@ final class AppModel {
         processor: selectedPostProcessorID, instructions: customCleanupInstructions,
         vocabulary: customWordsEnabled ? customWordsText : "") }
 
-    func startRecording(fromIntent: Bool = false) async {
+    func startRecording(fromIntent: Bool = false, fromKeyboard: Bool = false) async {
         await startServices()
         guard !isBusy else { return }
+        keyboardOrigin = fromKeyboard
         setupMessage = nil
         await recorder.start(options: options, fromIntent: fromIntent)
     }
@@ -134,7 +148,7 @@ final class AppModel {
         if unexpected { await recorder.interrupt(message: message) }
         else { await recorder.end(message: message) }
     }
-    func restoreOutput(_ text: String) { guard !history.isWorking else { return }; recorder.restore(text); selectedTab = 0 }
+    func restoreOutput(_ text: String, entryID: UUID) { guard !history.isWorking else { return }; recorder.restore(text, entryID: entryID); showRecorder() }
     func copyResult() {
         let text = processedText.isEmpty ? finalizedTranscript : processedText
         if !text.isEmpty { UIPasteboard.general.string = text }
@@ -167,6 +181,7 @@ final class AppModel {
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
             throw SpeechEngineError.unavailable("Open Saywick and allow microphone access before using background recording.")
         }
+        showRecorder()
         await startRecording(fromIntent: true)
         guard recorder.canStop else { throw SpeechEngineError.unavailable(statusMessage) }
     }
@@ -184,7 +199,12 @@ final class AppModel {
                 if let command = try sharedStore?.readCommand(), acknowledgment?.id != command.id { Task { await receive(command) } }
             } catch { DiagnosticLog.error("bridge.read-command", error) }
             if UIApplication.shared.applicationState == .active, let action = ShortcutRequests.consume(from: defaults) {
-                if action == .start { Task { await startRecording() } } else { selectedTab = 1 }
+                if action == .start { showRecorder(); Task { await startRecording() } } else { selectedTab = 1 }
+            }
+            if !keyboardVerified, !recorder.processedText.isEmpty,
+               (try? sharedStore?.readReceipt(recorder.sessionID))?.disposition == .inserted {
+                keyboardVerified = true
+                defaults.set(true, forKey: "keyboardInsertionVerified")
             }
             if recorder.session.ownsMicrophone || recorder.isBusy { publishSnapshot() }
             try? await Task.sleep(for: .milliseconds(recorder.session.ownsMicrophone || recorder.isBusy ? 250 : 1000))
@@ -218,7 +238,7 @@ final class AppModel {
         // Independent audio observers can still invalidate the recording during any suspension.
         switch command.kind {
         case .selectTemplate: break // Already applied together with its acknowledgment.
-        case .start: await startRecording()
+        case .start: await startRecording(fromKeyboard: true)
         case .stop: await recorder.stop()
         case .stopAndInsert: await recorder.stop(insert: true)
         case .cancel: await recorder.cancel()
@@ -236,9 +256,10 @@ final class AppModel {
             return "The recording or cleanup provider changed."
         }
         if let id = command.templateID {
-            guard let template = templates.items.first(where: { $0.id == id }) else {
+            guard var template = templates.items.first(where: { $0.id == id }) else {
                 return "This template is no longer available."
             }
+            template.modelID = template.modelID ?? defaultTemplateModel
             recorder.selectTemplate(template)
         } else {
             recorder.selectTemplate(nil)
@@ -321,12 +342,12 @@ final class AppModel {
                 correctionContext = context
             } catch { correctionError = error.localizedDescription }
         } else if url.host == "start" {
-            selectedTab = 0
-            await startRecording()
+            showRecorder()
+            await startRecording(fromKeyboard: source == "keyboard")
         } else if url.host == "history" {
             selectedTab = 1
         } else if url.host == "recorder" {
-            selectedTab = 0
+            showRecorder()
         }
     }
 

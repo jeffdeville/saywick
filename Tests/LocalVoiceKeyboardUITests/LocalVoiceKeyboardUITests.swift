@@ -34,10 +34,21 @@ final class LocalVoiceKeyboardUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["transcriptText"].label.contains("local voice simulator"))
     }
 
+    func testSettingsOpensTemplateModelChoice() {
+        let app = XCUIApplication()
+        app.launch()
+        app.buttons["Settings"].tap()
+        app.buttons["Templates"].tap()
+        app.buttons["New template"].tap()
+        app.buttons.containing(.staticText, identifier: "Cleanup model").firstMatch.tap()
+        XCTAssertTrue(app.textFields["Exact OpenAI model ID"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["stopDictation"].exists)
+    }
+
     func testMeetingModeIsRemoved() throws {
         let app = XCUIApplication()
         app.launch()
-        XCTAssertTrue(app.buttons["Start listening"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["startDictation"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["Record meeting"].exists)
     }
 
@@ -47,22 +58,20 @@ final class LocalVoiceKeyboardUITests: XCTestCase {
         app.launchArguments = ["-selectedEngine", engine, "-selectedPostProcessor", "none", "-customWords", customWords, "-customWordsEnabled", "YES"]
         app.launch()
 
-        let startButton = app.buttons["Start listening"]
+        let startButton = app.buttons["startDictation"]
         XCTAssertTrue(startButton.waitForExistence(timeout: 5))
         startButton.tap()
 
-        XCTAssertTrue(app.staticTexts["Listening"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["stopDictation"].waitForExistence(timeout: 5))
         XCTAssertTrue(
-            app.staticTexts[
-                "hello from the local voice simulator this transcript stayed on device"
-            ].waitForExistence(timeout: 5)
+            app.staticTexts["transcriptText"].waitForExistence(timeout: 5)
         )
 
-        let stopButton = app.buttons["Stop dictation"]
+        let stopButton = app.buttons["stopDictation"]
         XCTAssertTrue(stopButton.waitForExistence(timeout: 5))
         stopButton.tap()
 
-        XCTAssertTrue(app.staticTexts["Ready to insert"].waitForExistence(timeout: 30))
+        XCTAssertTrue(app.staticTexts["Just dictated"].waitForExistence(timeout: 30))
         XCTAssertTrue(app.buttons["Copy text"].exists)
         let cleanedTranscript = app.staticTexts["transcriptText"]
         XCTAssertTrue(cleanedTranscript.exists)

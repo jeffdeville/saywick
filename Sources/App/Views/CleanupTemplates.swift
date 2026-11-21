@@ -6,6 +6,7 @@ struct CleanupTemplate: Codable, Equatable, Identifiable, Sendable {
     var id = UUID()
     var name = ""
     var prompt = ""
+    var modelID: String?
 }
 
 @Observable
@@ -62,37 +63,48 @@ final class CleanupTemplates {
     }
 }
 
-struct CleanupTemplateSettings: View {
-    let catalog: CleanupTemplates
-    @State private var draft = CleanupTemplate()
-    @State private var error: String?
 
+struct CleanupTemplateSettings: View {
+    @Bindable var model: AppModel
     var body: some View {
-        Form {
-            Section("Saved templates") {
-                if let message = catalog.loadError { Text(message) }
-                ForEach(catalog.items) { item in
-                    Button(item.name) { draft = item; error = nil }
-                }
-                Button("New template") { draft = CleanupTemplate(); error = nil }
-            }
-            Section("Template") {
-                TextField("Name", text: $draft.name)
-                TextField("Prompt", text: $draft.prompt, axis: .vertical).lineLimit(3...12)
-                Button("Save") {
-                    do { try catalog.save(draft); draft = CleanupTemplate(); error = nil }
-                    catch { self.error = error.localizedDescription }
-                }
-                if catalog.items.contains(where: { $0.id == draft.id }) {
-                    Button("Delete template", role: .destructive) {
-                        do { try catalog.remove(draft.id); draft = CleanupTemplate(); error = nil }
-                        catch { self.error = error.localizedDescription }
+        List {
+            if let message = model.templates.loadError { Text(message) }
+            ForEach(model.templates.items) { item in
+                NavigationLink { TemplateEditor(model: model, draft: item) } label: {
+                    VStack(alignment: .leading) {
+                        Text(item.name)
+                        Text(item.modelID ?? "Use my OpenAI default").font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                if let error { Text(error).foregroundStyle(.red) }
             }
-            .disabled(catalog.loadError != nil)
-        }
-        .navigationTitle("Cleanup templates")
+            NavigationLink("New template") { TemplateEditor(model: model, draft: CleanupTemplate()) }
+        }.navigationTitle("Templates")
+    }
+}
+
+private struct TemplateEditor: View {
+    let model: AppModel
+    @State var draft: CleanupTemplate
+    @State private var error: String?
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        Form {
+            Section("Name") { TextField("Name", text: $draft.name) }
+            Section("Prompt") { TextField("What should this template do?", text: $draft.prompt, axis: .vertical).lineLimit(4...14) }
+            Section {
+                NavigationLink {
+                    ModelPicker(selected: $draft.modelID, inherited: model.defaultTemplateModel)
+                } label: { LabeledContent("Cleanup model", value: draft.modelID ?? "Use my default") }
+            } header: { Text("OpenAI") } footer: { Text("Applies only when you select this template for a recording.") }
+            Button("Save template") {
+                do { try model.templates.save(draft); dismiss() } catch { self.error = error.localizedDescription }
+            }
+            if model.templates.items.contains(where: { $0.id == draft.id }) {
+                Button("Delete template", role: .destructive) {
+                    do { try model.templates.remove(draft.id); dismiss() } catch { self.error = error.localizedDescription }
+                }
+            }
+            if let error { Text(error).foregroundStyle(.red) }
+        }.navigationTitle("Edit template")
     }
 }

@@ -36,7 +36,9 @@ final class KeyboardHandoffDeviceTests: XCTestCase {
         defer { app.terminate() }
         open.tap()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
-        let stop = app.buttons["Stop dictation"]
+        let stop = app.buttons["stopDictation"]
+        XCTAssertTrue(stop.waitForExistence(timeout: 30))
+        XCTAssertTrue(app.staticTexts["Return to your app and keep talking."].exists)
         // Always release capture after checking the URL handoff.
         if app.buttons["End microphone session"].waitForExistence(timeout: 15) {
             app.buttons["End microphone session"].tap()

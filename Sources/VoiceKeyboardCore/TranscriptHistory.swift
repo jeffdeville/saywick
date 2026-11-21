@@ -8,6 +8,7 @@ public struct TranscriptRun: Codable, Identifiable, Equatable, Sendable {
     public var rawText: String
     public var finalText: String
     public var cleanup: PostProcessorID
+    public var cleanupModelID: String?
     public var cleanupInstructions: String
     public var vocabulary: String
     public var elapsedSeconds: Double

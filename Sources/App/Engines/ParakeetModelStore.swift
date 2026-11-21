@@ -17,6 +17,13 @@ actor ParakeetModelStore {
     private var pending: Task<URL, Error>?
     private var verified: URL?
 
+    var hasDownloadedModel: Bool {
+        guard let base = try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
+                                                        appropriateFor: nil, create: false) else { return false }
+        let file = (root ?? base.appendingPathComponent("Parakeet")).appendingPathComponent(Self.filename)
+        return (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) == expectedSize
+    }
+
     func modelURL(allowDownload: Bool = true) async throws -> URL {
         if let verified, FileManager.default.fileExists(atPath: verified.path) { return verified }
         if let pending { return try await pending.value }

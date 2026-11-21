@@ -7,10 +7,12 @@ enum PostProcessingError: LocalizedError {
     case foundationModelUnavailable(SystemLanguageModel.Availability)
     case inputTooLarge
     case wordingChanged
+    case modelRejected
     case openAIUnavailable
 
     var errorDescription: String? {
         switch self {
+        case .modelRejected: "Check the template model ID and your account’s access."
         case .openAIUnavailable:
             "OpenAI cleanup is unavailable. Check the API key and network connection. Original text is preserved."
         case .inputTooLarge:
@@ -30,6 +32,7 @@ private struct CleanedTranscript {
 }
 
 enum TranscriptPostProcessor {
+    static let standardModel = "gpt-6-luna"
     static func process(
         _ text: String,
         using processor: PostProcessorID,
@@ -81,17 +84,17 @@ enum TranscriptPostProcessor {
 
     /// A named prompt operates on the entire finished dictation and owns its output format.
     static func applyTemplate(
-        _ prompt: String, to transcript: String,
+        _ prompt: String, to transcript: String, modelID: String = standardModel,
         readKey: () -> String? = OpenAIKeyStore.read,
         send: (URLRequest) async throws -> (Data, URLResponse) = { try await URLSession.shared.data(for: $0) }
     ) async throws -> String {
         guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return "" }
         guard let key = readKey(), !key.isEmpty else { throw PostProcessingError.openAIUnavailable }
-        return try await openAICompletion(key: key, instructions: prompt, input: transcript, send: send)
+        return try await openAICompletion(key: key, instructions: prompt, input: transcript, modelID: modelID, send: send)
     }
 
     private static func openAICompletion(
-        key: String, instructions: String, input: String,
+        key: String, instructions: String, input: String, modelID: String = standardModel,
         send: (URLRequest) async throws -> (Data, URLResponse) = { try await URLSession.shared.data(for: $0) }
     ) async throws -> String {
         try Task.checkCancellation()
@@ -100,15 +103,19 @@ enum TranscriptPostProcessor {
         request.timeoutInterval = 20
         request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
-            "model": "gpt-6-luna", "reasoning_effort": "none",
+        var payload: [String: Any] = [
+            "model": modelID,
             "messages": [
                 ["role": "system", "content": instructions],
                 ["role": "user", "content": input]
             ]
-        ])
+        ]
+        if modelID == standardModel { payload["reasoning_effort"] = "none" }
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
         let (data, response) = try await send(request)
         try Task.checkCancellation()
+        if let http = response as? HTTPURLResponse, [400, 403, 404].contains(http.statusCode),
+           modelID != standardModel { throw PostProcessingError.modelRejected }
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
               let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let choices = json["choices"] as? [[String: Any]], let choice = choices.first,

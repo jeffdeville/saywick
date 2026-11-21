@@ -27,10 +27,12 @@ final class CleanupTemplateTests: XCTestCase {
         let prompt = String(repeating: "Group by time of day. ", count: 35)
         let expected = "# Morning\n\nFirst event\n\n# Evening\n\nSecond event."
         var requests = 0
-        let result = try await TranscriptPostProcessor.applyTemplate(prompt, to: input, readKey: { "test" }) { request in
+        let result = try await TranscriptPostProcessor.applyTemplate(prompt, to: input, modelID: "journal-model", readKey: { "test" }) { request in
             requests += 1
             let body = try XCTUnwrap(request.httpBody)
             let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["model"] as? String, "journal-model")
+            XCTAssertNil(json["reasoning_effort"])
             let messages = try XCTUnwrap(json["messages"] as? [[String: String]])
             XCTAssertEqual(messages, [["role": "system", "content": prompt], ["role": "user", "content": input]])
             return try Self.response(for: request, content: expected, reason: "stop")

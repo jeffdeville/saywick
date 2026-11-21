@@ -56,7 +56,7 @@ Run this checklist on the physical phone before changing the default engine. Sim
 
 For each engine and cleanup option:
 
-1. Start listening in the app.
+1. Open the app from its icon. Verify the microphone is off, then tap Start dictation.
 2. Dictate ten seconds containing punctuation, a proper noun, a number, and a self-correction.
 3. Verify partial text changes rather than repeatedly appending duplicate words.
 4. Stop in the app and verify finalized/cleaned output.

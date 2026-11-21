@@ -31,8 +31,8 @@ final class DictationController {
             try await TranscriptPostProcessor.process(text, using: options.processor,
                 customInstructions: options.instructions, preferredWords: words)
         }
-        var applyTemplate: (String, String) async throws -> String = { prompt, text in
-            try await TranscriptPostProcessor.applyTemplate(prompt, to: text)
+        var applyTemplate: (String, String, String) async throws -> String = { prompt, text, model in
+            try await TranscriptPostProcessor.applyTemplate(prompt, to: text, modelID: model)
         }
         var cleanupEnabled: () -> Bool? = {
             guard let store = try? SharedContainerStore() else { return nil }
@@ -67,6 +67,7 @@ final class DictationController {
         activeTemplate = template
     }
 
+    private var appliedTemplateModel: String?
     private var appliedProcessor: PostProcessorID = .none
     private var rawText = ""
     private var latestPartial = ""
@@ -115,16 +116,19 @@ final class DictationController {
         }
         return effect
     }
+    private(set) var currentResultSession: UUID?
+    private(set) var restoredEntryID: UUID?
+
     func start(options: DictationOptions, fromIntent: Bool = false) async {
         guard !isBusy, !history.isWorking else { return }
         if session.idleDeadline.map({ $0 <= dependencies.now() }) == true {
             await end()
         }
-        activeTemplate = nil; templateFallback = nil
+        activeTemplate = nil; templateFallback = nil; appliedTemplateModel = nil; restoredEntryID = nil
         self.options = options; appliedProcessor = options.processor
         deferredEnd = false; idleTask?.cancel(); idleTask = nil
         shouldAutoInsert = false; processedText = ""; rawText = ""; latestPartial = ""
-        accumulator.reset(); sessionID = UUID(); preparationProgress = nil
+        accumulator.reset(); sessionID = UUID(); currentResultSession = sessionID; preparationProgress = nil
         history.stopPlayback(); RecordingErrorSound.shared.stop()
         let engine = dependencies.makeEngine(!fromIntent)
         self.engine = engine
@@ -194,7 +198,10 @@ final class DictationController {
                     guard templateGeneration == authorizationGeneration, options.processor == .openAILuna, externalCleanupAuthorized() else {
                         throw PostProcessingError.openAIUnavailable
                     }
-                    result = try await dependencies.applyTemplate(template.prompt, text)
+                    let model = template.modelID ?? TranscriptPostProcessor.standardModel
+                    result = try await dependencies.applyTemplate(template.prompt, text, model)
+                    guard token == session.generation else { return }
+                    appliedTemplateModel = model
                 } else {
                     result = try await dependencies.process(text, options, vocabulary.preferredWords)
                 }
@@ -206,7 +213,11 @@ final class DictationController {
                 DiagnosticLog.error("cleanup.process", error)
                 if options.processor.usesLanguageModel, !(error is CancellationError) {
                     processedText = RuleBasedCleaner.clean(text); appliedProcessor = .rules
-                    if template != nil { templateFallback = "Template unavailable · local cleanup used" }
+                    if template != nil {
+                        if case PostProcessingError.modelRejected = error {
+                            templateFallback = "Check your template model in Settings · local cleanup used"
+                        } else { templateFallback = "Template unavailable · local cleanup used" }
+                    }
                 } else { throw error }
             }
             guard token == session.generation else { return }
@@ -317,10 +328,12 @@ final class DictationController {
     }
     private func saveHistory(status: String, error: String? = nil) async throws {
         guard let id = history.activeID else { return }
-        try await history.recordCheckpoint(id: id, run: TranscriptRun(engine: .parakeetStreaming,
+        var run = TranscriptRun(engine: .parakeetStreaming,
             rawText: [rawText, latestPartial].filter { !$0.isEmpty }.joined(separator: " "), finalText: processedText,
             cleanup: appliedProcessor, cleanupInstructions: options.instructions, vocabulary: options.vocabulary,
-            elapsedSeconds: recordingStartedAt.map { dependencies.now().timeIntervalSince($0) } ?? 0, error: error), status: status)
+            elapsedSeconds: recordingStartedAt.map { dependencies.now().timeIntervalSince($0) } ?? 0, error: error)
+        run.cleanupModelID = appliedTemplateModel
+        try await history.recordCheckpoint(id: id, run: run, status: status)
     }
     private func scheduleIdle() {
         idleTask?.cancel()
@@ -354,11 +367,12 @@ final class DictationController {
         statusMessage = session.state == .activated ? "Ready to dictate · microphone active" : "Ready"; publish()
     }
     /// Restore only a completed result, never microphone ownership from disk.
-    func restoreResult(_ snapshot: SharedSessionSnapshot) {
+    func restoreResult(_ snapshot: SharedSessionSnapshot, showResult: Bool = true) {
         let recovered = snapshot.phase == .failed && snapshot.dictation?.pending == nil && !snapshot.insertableText.isEmpty
         guard !isBusy, session.state == .inactive, snapshot.phase == .ready || recovered else { return }
         templateFallback = snapshot.templateFallback
         sessionID = snapshot.sessionID; processedText = snapshot.insertableText
+        currentResultSession = showResult && !processedText.isEmpty ? sessionID : nil
         if recovered {
             _ = session.send(.activate)
             _ = session.send(.failure(snapshot.dictation?.issue ?? "Recording interrupted"))
@@ -367,9 +381,9 @@ final class DictationController {
         shouldAutoInsert = recovered ? false : snapshot.shouldAutoInsert
         statusMessage = recovered ? "Unfinished text recovered — insert it before starting again" : (processedText.isEmpty ? "Ready" : "Ready to insert — activate Saywick for another dictation")
     }
-    func restore(_ text: String) {
+    func restore(_ text: String, entryID: UUID? = nil) {
         guard !isBusy else { return }
-        clear(); processedText = text; statusMessage = "Restored from History — ready to insert"; publish()
+        clear(); restoredEntryID = entryID; currentResultSession = sessionID; processedText = text; statusMessage = "Restored from History — ready to insert"; publish()
     }
     private func updateActivity() async {
         guard dependencies.activities else { return }

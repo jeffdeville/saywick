@@ -3,24 +3,24 @@ import VoiceKeyboardCore
 
 struct HistoryView: View {
     @Bindable var model: AppModel
+    @Binding var path: [UUID]
     @State private var search = ""
     @State private var deleting: TranscriptHistoryEntry?
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             List {
-                Text(model.history.message).font(.caption).accessibilityIdentifier("historyStatus")
+                if !model.history.message.isEmpty { Text(model.history.message).font(.caption) }
                 if model.history.isWorking { Button("Cancel operation", role: .destructive) { model.history.cancelWork() } }
                 if model.history.entries.isEmpty {
                     ContentUnavailableView("No recordings yet", systemImage: "waveform", description: Text("Start a dictation to see it here."))
                 }
                 ForEach(model.history.entries.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search)
                     || $0.runs.contains { $0.rawText.localizedCaseInsensitiveContains(search) || $0.finalText.localizedCaseInsensitiveContains(search) } }) { entry in
-                    NavigationLink { HistoryDetailView(model: model, entryID: entry.id) } label: {
+                    NavigationLink(value: entry.id) {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(entry.title).lineLimit(2)
                             Text(entry.createdAt, style: .date).font(.caption).foregroundStyle(.secondary)
-                            Text("\(entry.runs.count) runs · \(entry.hasAudio ? "Audio retained" : "Text only")\(entry.pinned ? " · Pinned" : "")").font(.caption)
-                            Text(entry.status).font(.caption2).foregroundStyle(.secondary)
+                            if entry.pinned { Label("Pinned", systemImage: "pin").font(.caption) }
                         }
                     }
                     .swipeActions {
@@ -28,17 +28,8 @@ struct HistoryView: View {
                         Button(entry.pinned ? "Unpin" : "Pin") { model.history.pin(entry) }.tint(.orange).disabled(model.isBusy || model.history.isWorking)
                     }
                 }
-                Section("Retention — local, excluded from backups") {
-                    Toggle("Keep audio for playback", isOn: $model.history.keepAudio)
-                    Picker("Keep unpinned text", selection: $model.history.textDays) {
-                        Text("7 days").tag(7); Text("30 days").tag(30); Text("Forever").tag(0)
-                    }
-                    Picker("Keep unpinned audio", selection: $model.history.audioDays) {
-                        Text("1 day").tag(1); Text("7 days").tag(7); Text("30 days").tag(30); Text("Forever").tag(0)
-                    }
-                    Text("Expiry is checked when History refreshes or Saywick starts. Pin entries to keep them. Turning audio off affects future dictations. Clear resets active dictation, not saved history. Delete is permanent.").font(.caption)
-                }.disabled(model.isBusy || model.history.isWorking)
             }
+            .navigationDestination(for: UUID.self) { HistoryDetailView(model: model, entryID: $0) }
             .navigationTitle("History")
             .searchable(text: $search)
             .confirmationDialog("Permanently delete this recording and every comparison?", isPresented: Binding(
@@ -85,7 +76,7 @@ private struct HistoryDetailView: View {
                 ForEach(entry.runs) { result in
                     Section(result.model) {
                         Text(result.createdAt.formatted()).font(.caption)
-                        Text("\(result.cleanup.displayName) · \(result.elapsedSeconds, specifier: "%.1f") seconds").font(.caption)
+                        Text("\(result.cleanupModelID ?? result.cleanup.displayName) · \(result.elapsedSeconds, specifier: "%.1f") seconds").font(.caption)
                         if let error = result.error { Text(error).foregroundStyle(.orange) }
                         DisclosureGroup("Run configuration") {
                             Text("Requested cleanup instructions: \(result.cleanupInstructions)")
@@ -94,11 +85,11 @@ private struct HistoryDetailView: View {
                         Text("Original").font(.headline)
                         Text(result.rawText.isEmpty ? "No recognized text" : result.rawText).textSelection(.enabled)
                         CopyHistoryTextButton(title: "Copy original", text: result.rawText)
-                        Button("Use original in keyboard") { model.restoreOutput(result.rawText) }.disabled(disabled || result.rawText.isEmpty)
+                        Button("Use original in keyboard") { model.restoreOutput(result.rawText, entryID: entryID) }.disabled(disabled || result.rawText.isEmpty)
                         Text("Final").font(.headline)
                         Text(result.finalText.isEmpty ? "No final text" : result.finalText).textSelection(.enabled)
                         CopyHistoryTextButton(title: "Copy final", text: result.finalText)
-                        Button("Use final in keyboard") { model.restoreOutput(result.finalText) }.disabled(disabled || result.finalText.isEmpty)
+                        Button("Use final in keyboard") { model.restoreOutput(result.finalText, entryID: entryID) }.disabled(disabled || result.finalText.isEmpty)
                         Button("Reprocess original with current settings") {
                             model.history.compare(entry, engine: result.engine, cleanup: model.selectedPostProcessorID,
                                 instructions: model.customCleanupInstructions, vocabulary: model.customWordsEnabled ? model.customWordsText : "", reprocess: result)
@@ -167,5 +158,23 @@ private struct CopyHistoryTextButton: View {
             Label(copied ? "Copied" : title, systemImage: copied ? "checkmark" : "doc.on.doc")
         }
         .disabled(text.isEmpty)
+    }
+}
+
+struct HistoryStorageSettings: View {
+    @Bindable var model: AppModel
+    var body: some View {
+        Form {
+                Section("Retention — local, excluded from backups") {
+                    Toggle("Keep audio for playback", isOn: $model.history.keepAudio)
+                    Picker("Keep unpinned text", selection: $model.history.textDays) {
+                        Text("7 days").tag(7); Text("30 days").tag(30); Text("Forever").tag(0)
+                    }
+                    Picker("Keep unpinned audio", selection: $model.history.audioDays) {
+                        Text("1 day").tag(1); Text("7 days").tag(7); Text("30 days").tag(30); Text("Forever").tag(0)
+                    }
+                    Text("Expiry is checked when History refreshes or Saywick starts. Pin entries to keep them. Turning audio off affects future dictations. Clear resets active dictation, not saved history. Delete is permanent.").font(.caption)
+                }.disabled(model.isBusy || model.history.isWorking)
+        }.navigationTitle("History storage")
     }
 }
