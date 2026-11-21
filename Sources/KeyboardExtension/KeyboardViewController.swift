@@ -2,6 +2,13 @@ import UIKit
 import SwiftUI
 import VoiceKeyboardCore
 
+private final class TypingKey: UIButton {
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        // Adjacent fractional-width frames can round apart when UIKit converts a touch to local coordinates.
+        bounds.insetBy(dx: -0.25, dy: -0.25).contains(point)
+    }
+}
+
 class KeyboardViewController: UIInputViewController {
     private let statusLabel = UILabel()
     private let transcriptLabel = LiveTranscriptView()
@@ -255,8 +262,6 @@ class KeyboardViewController: UIInputViewController {
         typingPanel.isHidden = false
         typingPanel.axis = .vertical
         characterRows.axis = .vertical
-        characterRows.spacing = 10
-        typingPanel.spacing = 10
         typingPanel.addArrangedSubview(characterRows)
         let space = makeTypingKey(title: "space", action: #selector(insertSpace))
         space.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(moveCursor(_:))))
@@ -265,10 +270,9 @@ class KeyboardViewController: UIInputViewController {
         enter.configuration?.image = UIImage(systemName: "return")
         enter.accessibilityLabel = "return"
         let bottom = UIStackView(arrangedSubviews: [symbolsButton, nextKeyboardButton, space, enter])
-        bottom.spacing = 6
         bottom.axis = .horizontal
         typingPanel.addArrangedSubview(bottom)
-        bottom.heightAnchor.constraint(equalToConstant: 42).isActive = true
+        bottom.heightAnchor.constraint(equalToConstant: 48).isActive = true
         symbolsButton.widthAnchor.constraint(equalTo: bottom.widthAnchor, multiplier: 0.17).isActive = true
         enter.widthAnchor.constraint(equalTo: bottom.widthAnchor, multiplier: 0.22).isActive = true
         let globeWidth = nextKeyboardButton.widthAnchor.constraint(equalToConstant: 36)
@@ -361,10 +365,12 @@ class KeyboardViewController: UIInputViewController {
     }
 
     private func makeTypingKey(title: String, action: Selector, utility: Bool = false) -> UIButton {
-        let key = UIButton(type: .system)
+        let key = TypingKey(type: .system)
         var config = UIButton.Configuration.plain()
         config.title = title
         config.contentInsets = .zero
+        // Draw the gaps inside each button so adjacent keys share a touch boundary.
+        config.background.backgroundInsets = NSDirectionalEdgeInsets(top: 4, leading: 3, bottom: 4, trailing: 3)
         config.background.cornerRadius = 8
         config.background.backgroundColor = UIColor { traits in
             traits.userInterfaceStyle == .dark
@@ -397,18 +403,16 @@ class KeyboardViewController: UIInputViewController {
             let row = UIStackView()
             row.axis = .horizontal
             row.distribution = .fill
-            row.spacing = 6
             row.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(row)
             characterRows.addArrangedSubview(container)
-            container.heightAnchor.constraint(equalToConstant: 42).isActive = true
+            container.heightAnchor.constraint(equalToConstant: 50).isActive = true
             NSLayoutConstraint.activate([
                 row.centerXAnchor.constraint(equalTo: container.centerXAnchor),
                 row.topAnchor.constraint(equalTo: container.topAnchor),
                 row.bottomAnchor.constraint(equalTo: container.bottomAnchor),
                 row.widthAnchor.constraint(equalTo: container.widthAnchor,
-                    multiplier: index == 1 && !symbols ? 0.9 : 1,
-                    constant: index == 1 && !symbols ? -0.6 : 0)
+                    multiplier: index == 1 && !symbols ? 0.9 : 1)
             ])
             if index == 2 { row.addArrangedSubview(shiftButton) }
             var rowFirst: UIButton?

@@ -9,6 +9,49 @@ import VoiceKeyboardCore
 
 @MainActor
 final class TypingFallbackTests: XCTestCase {
+    func testLetterCentersAndSeamsReachTypingKeys() throws {
+        let keyboard = NoAccessKeyboard()
+        keyboard.loadViewIfNeeded()
+        let view = try XCTUnwrap(keyboard.view)
+        func hit(_ x: CGFloat, _ y: CGFloat) -> UIButton? {
+            var target = view.hitTest(CGPoint(x: x, y: y), with: nil)
+            while let current = target {
+                if let key = current as? UIButton { return key }
+                target = current.superview
+            }
+            return nil
+        }
+        for width in [320, 393] {
+            view.frame = CGRect(x: 0, y: 0, width: CGFloat(width), height: 274)
+            view.layoutIfNeeded()
+            for row in ["qwertyuiop", "asdfghjkl", "zxcvbnm"] {
+                var previous: UIButton?
+                for letter in row {
+                    let key = try button(String(letter), in: view)
+                    let frame = key.convert(key.bounds, to: view)
+                    XCTAssertIdentical(hit(frame.midX, frame.midY), key)
+                    if let previous {
+                        let left = previous.convert(previous.bounds, to: view)
+                        let seam = (left.maxX + frame.minX) / 2
+                        XCTAssertIdentical(hit(seam - 0.5, frame.midY), previous)
+                        XCTAssertIdentical(hit(seam + 0.5, frame.midY), key)
+                        let midpoint = hit(seam, frame.midY)
+                        XCTAssertTrue(midpoint === previous || midpoint === key)
+                    }
+                    previous = key
+                }
+            }
+            let upper = try button("g", in: view)
+            let lower = try button("v", in: view)
+            let upperFrame = upper.convert(upper.bounds, to: view)
+            let lowerFrame = lower.convert(lower.bounds, to: view)
+            let x = (max(upperFrame.minX, lowerFrame.minX) + min(upperFrame.maxX, lowerFrame.maxX)) / 2
+            let seam = (upperFrame.maxY + lowerFrame.minY) / 2
+            XCTAssertIdentical(hit(x, seam - 0.5), upper)
+            XCTAssertIdentical(hit(x, seam + 0.5), lower)
+        }
+    }
+
     func testKeysAndModeSwitchesWithoutFullAccess() throws {
         let keyboard = NoAccessKeyboard()
         keyboard.loadViewIfNeeded()
