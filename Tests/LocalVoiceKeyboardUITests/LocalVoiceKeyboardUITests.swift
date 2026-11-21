@@ -22,6 +22,9 @@ final class LocalVoiceKeyboardUITests: XCTestCase {
         let recording = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "hello from the local voice simulator")).firstMatch
         XCTAssertTrue(recording.waitForExistence(timeout: 5))
         recording.tap()
+        XCTAssertTrue(app.buttons["Copy final"].exists)
+        app.buttons["Original"].tap()
+        XCTAssertFalse(app.buttons["Copy final"].exists)
         let restore = app.buttons["Use original in keyboard"].firstMatch
         for _ in 0..<6 where !restore.isHittable { app.swipeUp() }
         XCTAssertTrue(restore.waitForExistence(timeout: 5))
@@ -32,6 +35,15 @@ final class LocalVoiceKeyboardUITests: XCTestCase {
         restore.tap()
         XCTAssertTrue(app.staticTexts["Restored from History — ready to insert"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["transcriptText"].label.contains("local voice simulator"))
+    }
+
+    func testTextCleanupHasNoDuplicateTemplatesLink() {
+        let app = XCUIApplication()
+        app.launch()
+        app.buttons["Settings"].tap()
+        XCTAssertTrue(app.buttons["Templates"].exists)
+        app.buttons["Text cleanup"].tap()
+        XCTAssertFalse(app.buttons["Templates"].exists)
     }
 
     func testSettingsOpensTemplateModelChoice() {

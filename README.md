@@ -15,11 +15,10 @@ The Saywick App Store name has not yet been verified as available.
 - A keyboard cleanup switch applies to dictations stopped from the keyboard, app, or shortcut; History reprocessing uses its selected cleanup independently.
 - Word-list dictionary and optional exact corrections, applied before cleanup.
 - Local history with original and final text, engine metadata, saved configuration,
-  independent comparison runs, pinning, search, and deletion.
+  saved transcript versions, search, and deletion.
 - Retained 16 kHz mono audio for playback and retranscription. Audio retention is
-  enabled by default (7 days); text defaults to 30 days. Pins exempt both from expiry.
-- Copy text, restore original/final text to the keyboard, export text or a Markdown
-  comparison, and share text to Notes through the standard iOS share sheet.
+  enabled by default (7 days); text defaults to 30 days. Previously pinned recordings are exempt until unpinned.
+- Copy the selected transcript or restore it to the keyboard.
 - Start Dictation and background Stop Recording App Shortcuts;
   assign them to the Action Button, Back Tap, or a custom Shortcut.
 - Live Activity / Dynamic Island recording status and a Stop button, without transcript contents.
@@ -49,8 +48,7 @@ timer. Turning retention off only affects future microphone recordings.
 Clear/Restart discards the current dictation's text/audio; insertion clears the
 active keyboard session but leaves its saved history. Deleting a history entry
 permanently removes its text and audio; Delete Audio Only preserves comparisons.
-Exported files
-and copies shared to other apps are outside history's deletion/retention policy.
+Copies pasted into other apps follow those apps’ retention policies.
 Keep only recordings you have permission to store or send to a provider.
 
 ## Build and install
@@ -124,8 +122,7 @@ automatically after a process termination or interruption.
 
 ## Saved recordings
 
-Open History > a recording to play audio, copy text, restore text to the keyboard,
-or **Transcribe with Parakeet**. Each run preserves earlier results and settings.
+Open a recording in History to play its saved audio and switch between Original and Final text. Copy either version or use it in the keyboard. Recording options include retranscription and deleting audio. A version picker appears when multiple runs are available.
 **Reprocess original** applies the selected cleanup and custom words without
 transcribing again. Existing recordings from retired engines remain readable.
 

@@ -5,7 +5,7 @@ import UIKit
 import VoiceKeyboardCore
 
 @MainActor @Observable
-final class HistoryModel {
+final class HistoryModel: NSObject, AVAudioPlayerDelegate {
     var entries: [TranscriptHistoryEntry] = []
     var message = ""
     var isWorking = false
@@ -28,6 +28,7 @@ final class HistoryModel {
         keepAudio = defaults.object(forKey: "keepAudio") == nil ? true : defaults.bool(forKey: "keepAudio")
         textDays = defaults.object(forKey: "historyTextDays") == nil ? 30 : defaults.integer(forKey: "historyTextDays")
         audioDays = defaults.object(forKey: "historyAudioDays") == nil ? 7 : defaults.integer(forKey: "historyAudioDays")
+        super.init()
         do {
             var root = try root ?? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
                                                    appropriateFor: nil, create: true).appendingPathComponent("SaywickHistory")
@@ -116,10 +117,20 @@ final class HistoryModel {
             RecordingErrorSound.shared.stop()
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
             try AVAudioSession.sharedInstance().setActive(true)
-            player = try AVAudioPlayer(contentsOf: url)
-            player?.play(); playingID = entry.id
+            let audio = try AVAudioPlayer(contentsOf: url)
+            audio.delegate = self
+            guard audio.play() else { message = "Could not play this recording."; return }
+            player = audio
+            playingID = entry.id
+            message = ""
         } catch { DiagnosticLog.error("history.operation", error); message = error.localizedDescription }
     }
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        guard self.player === player else { return }
+        stopPlayback()
+        if !flag { message = "Playback ended early." }
+    }
+
     func pin(_ entry: TranscriptHistoryEntry) {
         var updated = entry; updated.pinned.toggle()
         do { try store?.save(updated); reload() } catch { DiagnosticLog.error("history.operation", error); message = error.localizedDescription }

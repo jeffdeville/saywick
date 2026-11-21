@@ -58,11 +58,6 @@ private struct TextCleanupSettings: View {
                 default: LabeledContent("With Polish", value: "I need bread, milk, and eggs.")
                 }
             }
-            Section("One recording at a time") {
-                NavigationLink("Templates") { CleanupTemplateSettings(model: model) }
-                Text("OpenAI templates can rewrite or summarize a recording. With Apple selected, the keyboard shows only Polish.")
-                    .font(.footnote).foregroundStyle(.secondary)
-            }
         }.navigationTitle("Text cleanup")
     }
 }

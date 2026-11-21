@@ -25,7 +25,9 @@ struct HistoryView: View {
                     }
                     .swipeActions {
                         Button("Delete", role: .destructive) { deleting = entry }.disabled(model.isBusy || model.history.isWorking)
-                        Button(entry.pinned ? "Unpin" : "Pin") { model.history.pin(entry) }.tint(.orange).disabled(model.isBusy || model.history.isWorking)
+                        if entry.pinned {
+                            Button("Unpin") { model.history.pin(entry) }.tint(.orange).disabled(model.isBusy || model.history.isWorking)
+                        }
                     }
                 }
             }
@@ -47,87 +49,111 @@ private struct HistoryDetailView: View {
     @Bindable var model: AppModel
     let entryID: UUID
     @State private var deleteAudio = false
-    @State private var sharedItems: [Any] = []
-    @State private var sharing = false
-    @State private var heard = ""
-    @State private var preferred = ""
-    var entry: TranscriptHistoryEntry? { model.history.entries.first { $0.id == entryID } }
-    var disabled: Bool { model.isBusy || model.history.isWorking }
+    @State private var selectedID: UUID?
+    @State private var showOriginal: Bool?
+    private var entry: TranscriptHistoryEntry? { model.history.entries.first { $0.id == entryID } }
+    private var disabled: Bool { model.isBusy || model.history.isWorking }
+
+    private func selectedRun(in entry: TranscriptHistoryEntry) -> TranscriptRun? {
+        entry.runs.first { $0.id == selectedID }
+            ?? entry.runs.last { !$0.finalText.isEmpty }
+            ?? entry.runs.last { !$0.rawText.isEmpty }
+            ?? entry.runs.last
+    }
+
     var body: some View {
         Form {
             if let entry {
-                Section {
-                    Text(entry.title).font(.headline)
-                    Text(entry.createdAt.formatted()).font(.caption)
-                    Text(entry.source).font(.caption)
-                    Text(model.history.message).font(.caption)
-                    Button(entry.pinned ? "Unpin recording" : "Pin recording") { model.history.pin(entry) }.disabled(disabled)
+                Section("Original audio") {
                     if entry.hasAudio {
-                        Button(model.history.playingID == entry.id ? "Stop playback" : "Play original audio") { model.history.play(entry) }.disabled(disabled)
-                        Button("Delete audio only", role: .destructive) { deleteAudio = true }.disabled(disabled)
+                        let playing = model.history.playingID == entry.id
+                        Button {
+                            model.history.play(entry)
+                        } label: {
+                            Label(playing ? "Stop playback" : "Play original audio", systemImage: playing ? "stop.fill" : "play.fill")
+                        }.disabled(disabled)
+                    } else {
+                        Text("No saved audio").foregroundStyle(.secondary)
                     }
                 }
-                Section("Transcribe audio") {
-                    Button("Transcribe with Parakeet") { run(entry) }
-                        .accessibilityIdentifier("runComparison").disabled(disabled || !entry.hasAudio)
-                    Text("Saves a new transcript using current cleanup and custom words. OpenAI cleanup sends text to OpenAI. Earlier transcripts are kept.").font(.caption)
-                }.disabled(disabled)
-                if model.history.isWorking { Button("Cancel operation") { model.history.cancelWork() } }
-                ForEach(entry.runs) { result in
-                    Section(result.model) {
-                        Text(result.createdAt.formatted()).font(.caption)
-                        Text("\(result.cleanupModelID ?? result.cleanup.displayName) · \(result.elapsedSeconds, specifier: "%.1f") seconds").font(.caption)
-                        if let error = result.error { Text(error).foregroundStyle(.orange) }
-                        DisclosureGroup("Run configuration") {
-                            Text("Requested cleanup instructions: \(result.cleanupInstructions)")
-                            Text("Custom words: \(result.vocabulary.isEmpty ? "None" : result.vocabulary)")
-                        }.font(.caption)
-                        Text("Original").font(.headline)
-                        Text(result.rawText.isEmpty ? "No recognized text" : result.rawText).textSelection(.enabled)
-                        CopyHistoryTextButton(title: "Copy original", text: result.rawText)
-                        Button("Use original in keyboard") { model.restoreOutput(result.rawText, entryID: entryID) }.disabled(disabled || result.rawText.isEmpty)
-                        Text("Final").font(.headline)
-                        Text(result.finalText.isEmpty ? "No final text" : result.finalText).textSelection(.enabled)
-                        CopyHistoryTextButton(title: "Copy final", text: result.finalText)
-                        Button("Use final in keyboard") { model.restoreOutput(result.finalText, entryID: entryID) }.disabled(disabled || result.finalText.isEmpty)
-                        Button("Reprocess original with current settings") {
-                            model.history.compare(entry, engine: result.engine, cleanup: model.selectedPostProcessorID,
-                                instructions: model.customCleanupInstructions, vocabulary: model.customWordsEnabled ? model.customWordsText : "", reprocess: result)
-                        }.disabled(disabled || result.rawText.isEmpty)
+                let run = selectedRun(in: entry)
+                if let run {
+                    Section {
+                        if entry.runs.count > 1 {
+                            Picker("Version", selection: Binding(get: { run.id }, set: { selectedID = $0; showOriginal = nil })) {
+                                ForEach(Array(entry.runs.enumerated()), id: \.element.id) { index, version in
+                                    Text("Version \(index + 1)\(version.error == nil ? "" : " · Incomplete")").tag(version.id)
+                                }
+                            }
+                        }
+                        let original = showOriginal ?? run.finalText.isEmpty
+                        Picker("Transcript", selection: Binding(get: { original }, set: { showOriginal = $0 })) {
+                            Text("Original").tag(true)
+                            Text("Final").tag(false)
+                        }.pickerStyle(.segmented)
+                        let text = original ? run.rawText : run.finalText
+                        if !text.isEmpty {
+                            Text(text).textSelection(.enabled)
+                            CopyHistoryTextButton(title: original ? "Copy original" : "Copy final", text: text)
+                                .id(text)
+                            Button(original ? "Use original in keyboard" : "Use final in keyboard") {
+                                model.restoreOutput(text, entryID: entryID)
+                            }.disabled(disabled)
+                        } else {
+                            Text(original ? "No recognized text" : "No final text").foregroundStyle(.secondary)
+                        }
+                        if let error = run.error { Text(error).foregroundStyle(.secondary) }
                     }
                 }
-                Section("Add a spelling correction") {
-                    TextField("Heard spelling", text: $heard).autocorrectionDisabled()
-                    TextField("Preferred spelling", text: $preferred).autocorrectionDisabled()
-                    Button("Save correction") {
-                        do { try model.addCorrection(heard: heard, preferred: preferred); model.history.message = "Correction saved for future runs." }
-                        catch { model.history.message = error.localizedDescription }
-                    }.disabled(disabled || heard.isEmpty || preferred.isEmpty)
-                }
-                Section("Export") {
-                    Button("Share text / Save to Notes") {
-                        sharedItems = [entry.runs.last(where: { $0.error == nil })?.finalText ?? ""]; sharing = true
+                if run?.rawText.isEmpty != false && run?.finalText.isEmpty != false {
+                    Section {
+                        Text("No transcript available")
+                        if entry.hasAudio { transcribeButton(entry) }
                     }
-                    Button("Export .txt") { export(entry, markdown: false) }
-                    Button("Export Markdown comparison") { export(entry, markdown: true) }
-                    if let url = model.history.audioURL(entry) { Button("Share original audio") { sharedItems = [url]; sharing = true } }
-                }.disabled(disabled)
+                }
+                if !model.history.message.isEmpty { Text(model.history.message).font(.footnote) }
+                if model.history.isWorking {
+                    Button("Cancel operation", role: .destructive) { model.history.cancelWork() }
+                }
             }
         }
         .navigationTitle("Recording")
-        .sheet(isPresented: $sharing) { ActivityShareView(items: sharedItems) }
-        .confirmationDialog("Permanently delete audio? Text and comparisons will remain.", isPresented: $deleteAudio) {
+        .toolbar {
+            if let entry {
+                let run = selectedRun(in: entry)
+                if entry.hasAudio || run?.rawText.isEmpty == false || run?.cleanupModelID != nil {
+                    Menu {
+                        if let modelID = run?.cleanupModelID { Text("Cleanup model: " + modelID) }
+                        if entry.hasAudio { transcribeButton(entry) }
+                        if let run, !run.rawText.isEmpty {
+                            Button(model.selectedPostProcessorID == .openAILuna ? "Reprocess original with OpenAI" : "Reprocess original") {
+                                compare(entry, run: run)
+                            }.disabled(disabled)
+                        }
+                        if entry.hasAudio {
+                            Button("Delete audio only", role: .destructive) { deleteAudio = true }.disabled(disabled)
+                        }
+                    } label: { Label("Recording options", systemImage: "ellipsis.circle") }
+                }
+            }
+        }
+        .confirmationDialog("Permanently delete audio? The transcript will remain.", isPresented: $deleteAudio) {
             Button("Delete audio", role: .destructive) { if let entry { model.history.delete(entry, audioOnly: true) } }
         }
         .onDisappear { model.history.stopPlayback() }
     }
-    private func run(_ entry: TranscriptHistoryEntry) {
-        model.history.compare(entry, engine: .parakeetStreaming, cleanup: model.selectedPostProcessorID,
-            instructions: model.customCleanupInstructions, vocabulary: model.customWordsEnabled ? model.customWordsText : "")
+
+    private func transcribeButton(_ entry: TranscriptHistoryEntry) -> some View {
+        Button(model.selectedPostProcessorID == .openAILuna ? "Transcribe audio with OpenAI cleanup" : "Transcribe audio") {
+            compare(entry, run: nil)
+        }.accessibilityIdentifier("runComparison").disabled(disabled)
     }
-    private func export(_ entry: TranscriptHistoryEntry, markdown: Bool) {
-        do { sharedItems = [try model.history.export(entry, markdown: markdown)]; sharing = true }
-        catch { model.history.message = error.localizedDescription }
+
+    private func compare(_ entry: TranscriptHistoryEntry, run: TranscriptRun?) {
+        selectedID = nil
+        showOriginal = nil
+        model.history.compare(entry, engine: run?.engine ?? .parakeetStreaming, cleanup: model.selectedPostProcessorID,
+            instructions: model.customCleanupInstructions, vocabulary: model.customWordsEnabled ? model.customWordsText : "", reprocess: run)
     }
 }
 
@@ -173,7 +199,7 @@ struct HistoryStorageSettings: View {
                     Picker("Keep unpinned audio", selection: $model.history.audioDays) {
                         Text("1 day").tag(1); Text("7 days").tag(7); Text("30 days").tag(30); Text("Forever").tag(0)
                     }
-                    Text("Expiry is checked when History refreshes or Saywick starts. Pin entries to keep them. Turning audio off affects future dictations. Clear resets active dictation, not saved history. Delete is permanent.").font(.caption)
+                    Text("Expiry is checked when History refreshes or Saywick starts. Previously pinned entries are kept until you unpin or delete them. Turning audio off affects future dictations. Clear resets active dictation, not saved history. Delete is permanent.").font(.caption)
                 }.disabled(model.isBusy || model.history.isWorking)
         }.navigationTitle("History storage")
     }

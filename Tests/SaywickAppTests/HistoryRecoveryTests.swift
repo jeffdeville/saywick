@@ -28,6 +28,19 @@ import VoiceKeyboardCore
         try file.write(from: buffer)
         return url
     }
+    func testOriginalAudioCanBeReplayedAfterItFinishes() async throws {
+        let entry = TranscriptHistoryEntry(hasAudio: true)
+        _ = try audio(entry.id.uuidString + ".wav")
+        for _ in 0..<2 {
+            history.play(entry)
+            XCTAssertEqual(history.playingID, entry.id)
+            for _ in 0..<60 where history.playingID != nil {
+                try await Task.sleep(for: .milliseconds(50))
+            }
+            XCTAssertNil(history.playingID)
+        }
+    }
+
     func testPreviouslyImportedRecordingRemainsAccessibleForHistoryOperations() async throws {
         let legacy = TranscriptHistoryEntry(title: "Existing recording", source: "Imported audio", hasAudio: true)
         try XCTUnwrap(history.store).save(legacy)
