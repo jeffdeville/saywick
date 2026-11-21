@@ -2,7 +2,7 @@ import UIKit
 import SwiftUI
 import VoiceKeyboardCore
 
-final class KeyboardViewController: UIInputViewController {
+class KeyboardViewController: UIInputViewController {
     private let statusLabel = UILabel()
     private let transcriptLabel = UILabel()
     private let stopButton = UIButton(type: .system)
