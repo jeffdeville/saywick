@@ -41,6 +41,7 @@ class KeyboardViewController: UIInputViewController {
     private let voicePanel = UIStackView()
     private let rootStack = UIStackView()
     private let controlBar = UIStackView()
+    private let controlBarHeight: CGFloat = 28
     private var primaryWidth: NSLayoutConstraint?
     private var showsTranscript = false
     private var isListeningLayout = false
@@ -136,7 +137,7 @@ class KeyboardViewController: UIInputViewController {
     private func configureView() {
         view.backgroundColor = UIColor { $0.userInterfaceStyle == .dark
             ? UIColor(white: 0.12, alpha: 1) : UIColor(red: 0.87, green: 0.88, blue: 0.90, alpha: 1) }
-        keyboardHeight = view.heightAnchor.constraint(equalToConstant: 250)
+        keyboardHeight = view.heightAnchor.constraint(equalToConstant: 194 + controlBarHeight)
         keyboardHeight?.priority = .defaultHigh
         keyboardHeight?.isActive = true
 
@@ -165,10 +166,10 @@ class KeyboardViewController: UIInputViewController {
         stopButton.configuration = .filled()
         stopButton.configuration?.title = nil
         stopButton.configuration?.image = UIImage(systemName: "mic.fill")
-        stopButton.configuration?.preferredSymbolConfigurationForImage = .init(pointSize: 28, weight: .semibold)
+        stopButton.configuration?.preferredSymbolConfigurationForImage = .init(pointSize: 17, weight: .semibold)
         stopButton.accessibilityIdentifier = "dictationAction"
         stopButton.configuration?.cornerStyle = .capsule
-        stopButton.configuration?.imagePadding = 6
+        stopButton.configuration?.contentInsets = .zero
         stopButton.titleLabel?.numberOfLines = 1
         stopButton.titleLabel?.adjustsFontSizeToFitWidth = true
         stopButton.addTarget(self, action: #selector(stopAndInsert), for: .touchUpInside)
@@ -193,12 +194,12 @@ class KeyboardViewController: UIInputViewController {
                                          (undoButton, "arrow.uturn.backward", "Undo insertion")] {
             button.configuration = .plain()
             button.configuration?.image = UIImage(systemName: symbol)
-            button.configuration?.preferredSymbolConfigurationForImage = .init(pointSize: 23)
+            button.configuration?.preferredSymbolConfigurationForImage = .init(pointSize: 17)
             button.configuration?.baseForegroundColor = .label
             button.accessibilityLabel = label
             let width = button.widthAnchor.constraint(equalToConstant: 40)
             width.priority = .init(999); width.isActive = true
-            button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+            button.configuration?.contentInsets = .zero
         }
         endSessionButton.accessibilityLabel = "End microphone session"
         nextKeyboardButton.configuration = .plain()
@@ -219,20 +220,17 @@ class KeyboardViewController: UIInputViewController {
         [menuButton, undoButton, cancelButton, UIView(), cleanupButton, launch.view!, stopButton].forEach { controlBar.addArrangedSubview($0) }
         controlBar.axis = .horizontal
         controlBar.distribution = .fill
-        controlBar.alignment = .center
+        controlBar.alignment = .fill
         controlBar.spacing = 6
         cancelButton.configuration?.title = nil
         cancelButton.configuration?.image = UIImage(systemName: "xmark")
+        cancelButton.configuration?.contentInsets = .zero
         cancelButton.accessibilityLabel = "Cancel dictation"
         cleanupButton.setContentHuggingPriority(.required, for: .horizontal)
         primaryWidth = stopButton.widthAnchor.constraint(equalToConstant: 56)
         let controlSizes = [
             cancelButton.widthAnchor.constraint(equalToConstant: 44),
-            cancelButton.heightAnchor.constraint(equalToConstant: 44),
-            cleanupButton.heightAnchor.constraint(equalToConstant: 44),
             primaryWidth!,
-            stopButton.heightAnchor.constraint(equalToConstant: 56),
-            launch.view.heightAnchor.constraint(equalToConstant: 56),
             launch.view.widthAnchor.constraint(equalToConstant: 56),
             insertButton.heightAnchor.constraint(equalToConstant: 44),
         ]
@@ -307,7 +305,7 @@ class KeyboardViewController: UIInputViewController {
         NSLayoutConstraint.activate([
             rootStack.topAnchor.constraint(equalTo: view.topAnchor, constant: 6),
             rootStack.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
-            controlBar.heightAnchor.constraint(equalToConstant: 56),
+            controlBar.heightAnchor.constraint(equalToConstant: controlBarHeight),
             space.widthAnchor.constraint(greaterThanOrEqualToConstant: 70),
         ])
     }
@@ -343,7 +341,7 @@ class KeyboardViewController: UIInputViewController {
     private func updateKeyboardHeight() {
         let extras = (morePanel.isHidden ? 0 : 46) + (statusLabel.isHidden ? 0 : 38)
             + (correctionController?.view.isHidden == false ? 38 : 0)
-        keyboardHeight?.constant = CGFloat(showsTranscript ? 250 : 274) + CGFloat(extras) + (templateMenu.isHidden ? 0 : (templateHeight?.constant ?? 0) + 8)
+        keyboardHeight?.constant = controlBarHeight + CGFloat(showsTranscript ? 194 : 218) + CGFloat(extras) + (templateMenu.isHidden ? 0 : (templateHeight?.constant ?? 0) + 8)
         sideConstraints.first?.constant = showsTranscript ? 12 : 6
         sideConstraints.last?.constant = showsTranscript ? -12 : -6
     }
@@ -509,7 +507,8 @@ class KeyboardViewController: UIInputViewController {
             var polish = UIButton.Configuration.plain()
             polish.baseForegroundColor = polished ? .systemBlue : .secondaryLabel
             polish.background.backgroundColor = polished ? UIColor.systemBlue.withAlphaComponent(0.14) : .clear
-            polish.background.cornerRadius = 22
+            polish.cornerStyle = .capsule
+            polish.contentInsets = .init(top: 0, leading: 10, bottom: 0, trailing: 10)
             polish.background.strokeColor = polished ? .clear : .separator
             polish.background.strokeWidth = polished ? 0 : 1
             polish.title = selected?.name ?? (hasMenu && !enabled ? "Off" : "Polish")
@@ -837,7 +836,7 @@ private struct KeyboardAppLink: View {
             }
         } label: {
             Image(systemName: "mic.fill")
-                .font(.system(size: 28, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .foregroundStyle(Color(uiColor: .systemBackground))
                 .background(Color.primary, in: Circle())

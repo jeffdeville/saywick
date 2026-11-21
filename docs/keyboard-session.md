@@ -133,7 +133,7 @@ no address-book enumeration, phone numbers, or emails are stored. Duplicates are
 removed case-insensitively. Imported names can be edited/deleted in the word list.
 
 The keyboard uses a light gray or dark background with rounded keys. The transcript
-layout requests 250 points and typing 274, with extra height for visible status,
+layout requests 222 points and typing 246, including a 28-point toolbar, with extra height for visible status,
 correction, or inline menu rows.
 The bottom row is pinned six points from the extension edge; iOS owns the separate
 globe/microphone area below the extension.

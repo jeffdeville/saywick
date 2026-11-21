@@ -22,7 +22,7 @@ final class TypingFallbackTests: XCTestCase {
             return nil
         }
         for width in [320, 393] {
-            view.frame = CGRect(x: 0, y: 0, width: CGFloat(width), height: 274)
+            view.frame = CGRect(x: 0, y: 0, width: CGFloat(width), height: 246)
             view.layoutIfNeeded()
             for row in ["qwertyuiop", "asdfghjkl", "zxcvbnm"] {
                 var previous: UIButton?
@@ -56,7 +56,7 @@ final class TypingFallbackTests: XCTestCase {
         let keyboard = NoAccessKeyboard()
         keyboard.loadViewIfNeeded()
         XCTAssertFalse(keyboard.hasFullAccess)
-        keyboard.view.frame = CGRect(x: 0, y: 0, width: 320, height: 318)
+        keyboard.view.frame = CGRect(x: 0, y: 0, width: 320, height: 290)
         keyboard.view.layoutIfNeeded()
         for character in "abcdefghijklmnopqrstuvwxyz" {
             XCTAssertTrue(try button(String(character), in: keyboard.view).isEnabled)
@@ -71,10 +71,10 @@ final class TypingFallbackTests: XCTestCase {
         XCTAssertTrue(try button("space", in: keyboard.view).isEnabled)
         XCTAssertTrue(try button("return", in: keyboard.view).isEnabled)
         XCTAssertTrue(try button("⌫", in: keyboard.view).isEnabled)
-        keyboard.view.frame = CGRect(x: 0, y: 0, width: 320, height: 274)
+        keyboard.view.frame = CGRect(x: 0, y: 0, width: 320, height: 246)
         keyboard.view.layoutIfNeeded()
         let space = try button("space", in: keyboard.view)
-        XCTAssertEqual(space.convert(space.bounds, to: keyboard.view).maxY, 268, accuracy: 1)
+        XCTAssertEqual(space.convert(space.bounds, to: keyboard.view).maxY, 240, accuracy: 1)
         let q = try button("Q", in: keyboard.view)
         let a = try button("A", in: keyboard.view)
         let z = try button("Z", in: keyboard.view)
@@ -93,11 +93,11 @@ final class TypingFallbackTests: XCTestCase {
     func testKeyboardActionsStayInlineAndBottomRowIsAnchored() throws {
         let keyboard = NoAccessKeyboard()
         keyboard.loadViewIfNeeded()
-        keyboard.view.frame = CGRect(x: 0, y: 0, width: 393, height: 274)
+        keyboard.view.frame = CGRect(x: 0, y: 0, width: 393, height: 246)
         keyboard.view.layoutIfNeeded()
         let bottom = try button("return", in: keyboard.view)
         let frame = bottom.convert(bottom.bounds, to: keyboard.view)
-        XCTAssertEqual(frame.maxY, 268, accuracy: 1)
+        XCTAssertEqual(frame.maxY, 240, accuracy: 1)
         try button("More", in: keyboard.view).sendActions(for: .touchUpInside)
         XCTAssertNil(keyboard.presentedViewController)
         try button("Enable Full Access", in: keyboard.view).sendActions(for: .touchUpInside)
@@ -131,7 +131,7 @@ final class TypingFallbackTests: XCTestCase {
         try button("123", in: keyboard.view).sendActions(for: .touchUpInside)
         XCTAssertTrue(try button("1", in: keyboard.view).isEnabled)
         try button("ABC", in: keyboard.view).sendActions(for: .touchUpInside)
-        keyboard.view.frame = CGRect(x: 0, y: 0, width: 393, height: 274)
+        keyboard.view.frame = CGRect(x: 0, y: 0, width: 393, height: 246)
         keyboard.view.layoutIfNeeded()
         let q = try button("q", in: keyboard.view)
         XCTAssertEqual(q.traitCollection.userInterfaceStyle, .dark)

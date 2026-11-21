@@ -265,7 +265,7 @@ import VoiceKeyboardCore
         var snapshot = SharedSessionSnapshot(phase: .listening, partialText: "First words")
         try bridge.write(snapshot: snapshot)
         let k = keyboard()
-        k.view.frame = CGRect(x: 0, y: 0, width: 393, height: 250)
+        k.view.frame = CGRect(x: 0, y: 0, width: 393, height: 222)
         func transcript(in view: UIView) -> UITextView? {
             if let text = view as? UITextView, text.accessibilityIdentifier == "keyboardTranscript" { return text }
             return view.subviews.compactMap { transcript(in: $0) }.first
@@ -293,7 +293,7 @@ import VoiceKeyboardCore
         var snapshot = SharedSessionSnapshot(phase: .listening, partialText: "Speaking now")
         try bridge.write(snapshot: snapshot)
         let k = keyboard()
-        k.view.frame = CGRect(x: 0, y: 0, width: 393, height: 250)
+        k.view.frame = CGRect(x: 0, y: 0, width: 393, height: 222)
         k.view.layoutIfNeeded()
         func visible(_ view: UIView) -> Bool {
             !view.isHidden && (view.superview.map { visible($0) } ?? true)
@@ -312,7 +312,7 @@ import VoiceKeyboardCore
         XCTAssertNotNil(stop.configuration?.image)
         let polish = try button("Polish", k.view)
         XCTAssertLessThan(polish.bounds.width, 140)
-        XCTAssertEqual(stop.bounds.height, 56, accuracy: 1)
+        XCTAssertEqual(stop.bounds.height, 28, accuracy: 1)
         let attachment = XCTAttachment(image: UIGraphicsImageRenderer(bounds: k.view.bounds).image { context in
             UIColor.systemBackground.setFill()
             context.fill(k.view.bounds)
@@ -339,7 +339,7 @@ import VoiceKeyboardCore
         for title in ["q", "Polish", "More", "Undo insertion", "Start dictation"] {
             XCTAssertTrue(visible(try button(title, k.view)), title)
         }
-        k.view.frame = CGRect(x: 0, y: 0, width: 393, height: 274); k.view.layoutIfNeeded()
+        k.view.frame = CGRect(x: 0, y: 0, width: 393, height: 246); k.view.layoutIfNeeded()
         let mic = try button("Start dictation", k.view)
         XCTAssertLessThan(mic.convert(mic.bounds, to: k.view).maxY,
                           try button("q", k.view).convert(try button("q", k.view).bounds, to: k.view).minY)
