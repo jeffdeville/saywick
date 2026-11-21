@@ -129,6 +129,10 @@ transcribing again. Existing recordings from retired engines remain readable.
 
 Recordings imported by earlier versions remain available in History under the usual retention settings.
 
+## Named cleanup templates
+
+With OpenAI selected in Pipeline, open **Cleanup templates** to save a name and a prompt. A template can reorganize the completed dictation, add headings or summarize it. Regular Polish continues to preserve wording. Custom prompts and transcript text go to the selected OpenAI endpoint using your key.
+
 ## Final text cleanup
 
 Live text is a draft. Speech engines may interpret a thinking pause as a sentence

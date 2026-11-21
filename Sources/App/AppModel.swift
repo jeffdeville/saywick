@@ -7,6 +7,7 @@ import VoiceKeyboardCore
 @MainActor @Observable
 final class AppModel {
     static let shared = AppModel()
+    let templates: CleanupTemplates
     let recorder: DictationController
     var history: HistoryModel
     var correctionContext: VocabularyCorrectionContext?
@@ -53,6 +54,7 @@ final class AppModel {
     }
 
     init(defaults: UserDefaults = .standard, history: HistoryModel? = nil, dependencies: DictationController.Dependencies = .init(), bridge: SharedContainerStore? = nil) {
+        self.templates = CleanupTemplates(defaults: defaults)
         self.servicesEnabled = dependencies.activities
         let history = history ?? HistoryModel(defaults: defaults)
         self.history = history
@@ -93,6 +95,7 @@ final class AppModel {
             DiagnosticLog.error("bridge.initialize", error)
             self.bridgeMessage = error.localizedDescription
         }
+        recorder.externalCleanupAuthorized = { [weak self] in self?.selectedPostProcessorID == .openAILuna }
         recorder.onChange = { [weak self] in self?.publishSnapshot() }
     }
 

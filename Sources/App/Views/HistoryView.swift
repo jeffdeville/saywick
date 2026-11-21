@@ -88,7 +88,7 @@ private struct HistoryDetailView: View {
                         Text("\(result.cleanup.displayName) · \(result.elapsedSeconds, specifier: "%.1f") seconds").font(.caption)
                         if let error = result.error { Text(error).foregroundStyle(.orange) }
                         DisclosureGroup("Run configuration") {
-                            Text("Cleanup preference: \(result.cleanupInstructions)")
+                            Text("Requested cleanup instructions: \(result.cleanupInstructions)")
                             Text("Custom words: \(result.vocabulary.isEmpty ? "None" : result.vocabulary)")
                         }.font(.caption)
                         Text("Original").font(.headline)

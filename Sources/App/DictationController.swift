@@ -31,6 +31,9 @@ final class DictationController {
             try await TranscriptPostProcessor.process(text, using: options.processor,
                 customInstructions: options.instructions, preferredWords: words)
         }
+        var applyTemplate: (String, String) async throws -> String = { prompt, text in
+            try await TranscriptPostProcessor.applyTemplate(prompt, to: text)
+        }
         var cleanupEnabled: () -> Bool? = {
             guard let store = try? SharedContainerStore() else { return nil }
             return try? store.cleanupEnabled()
@@ -47,6 +50,14 @@ final class DictationController {
     private(set) var recordingStartedAt: Date?
     private(set) var accumulator = TranscriptAccumulator()
     private(set) var options = DictationOptions()
+    var externalCleanupAuthorized: () -> Bool = { false }
+    private(set) var activeTemplate: CleanupTemplate?
+    private(set) var templateFallback: String?
+
+    func selectTemplate(_ template: CleanupTemplate?) {
+        activeTemplate = template
+    }
+
     private var appliedProcessor: PostProcessorID = .none
     private var rawText = ""
     private var latestPartial = ""
@@ -100,6 +111,7 @@ final class DictationController {
         if session.idleDeadline.map({ $0 <= dependencies.now() }) == true {
             await end()
         }
+        activeTemplate = nil; templateFallback = nil
         self.options = options; appliedProcessor = options.processor
         deferredEnd = false; idleTask?.cancel(); idleTask = nil
         shouldAutoInsert = false; processedText = ""; rawText = ""; latestPartial = ""
@@ -153,7 +165,10 @@ final class DictationController {
         guard transition(.finish) == .finish else { return }
         let token = session.generation
         let cleanupEnabled = dependencies.cleanupEnabled()
-        if cleanupEnabled != true {
+        let template = activeTemplate
+        activeTemplate = nil
+        if let template { options.instructions = template.prompt }
+        if template == nil && cleanupEnabled != true {
             options.processor = .none; appliedProcessor = .none
         }
         deferredEnd = release; statusMessage = "Finalizing transcript…"; publish()
@@ -164,7 +179,15 @@ final class DictationController {
             let vocabulary = try CustomVocabulary(options.vocabulary)
             let text = vocabulary.apply(to: accumulator.finalizedText)
             do {
-                let result = try await dependencies.process(text, options, vocabulary.preferredWords)
+                let result: String
+                if let template {
+                    guard options.processor == .openAILuna, externalCleanupAuthorized() else {
+                        throw PostProcessingError.openAIUnavailable
+                    }
+                    result = try await dependencies.applyTemplate(template.prompt, text)
+                } else {
+                    result = try await dependencies.process(text, options, vocabulary.preferredWords)
+                }
                 guard token == session.generation else { return }
                 processedText = result
             }
@@ -173,11 +196,12 @@ final class DictationController {
                 DiagnosticLog.error("cleanup.process", error)
                 if options.processor.usesLanguageModel, !(error is CancellationError) {
                     processedText = RuleBasedCleaner.clean(text); appliedProcessor = .rules
+                    if template != nil { templateFallback = "Template unavailable · local cleanup used" }
                 } else { throw error }
             }
             guard token == session.generation else { return }
             try await saveHistory(status: "Ready")
-            statusMessage = processedText.isEmpty ? "No speech detected" : (cleanupEnabled == nil ? "Cleanup setting unavailable · cleanup skipped" : (appliedProcessor != options.processor ? "Cleanup unavailable · local rules used" : "Ready to insert"))
+            statusMessage = templateFallback ?? (processedText.isEmpty ? "No speech detected" : (cleanupEnabled == nil ? "Cleanup setting unavailable · cleanup skipped" : (appliedProcessor != options.processor ? "Cleanup unavailable · local rules used" : "Ready to insert")))
             guard token == session.generation else { return }
             let retain = options.keepReady && !deferredEnd && engine?.requiresMicrophoneAuthorization == true
             shouldAutoInsert = insert && !deferredEnd
@@ -191,6 +215,7 @@ final class DictationController {
     }
     func cancel(restart: Bool = false) async {
         guard transition(.cancel) == .cancel else { return }
+        activeTemplate = nil
         idleTask?.cancel(); shouldAutoInsert = false
         let token = session.generation
         let cancelledEngine = engine
@@ -224,6 +249,7 @@ final class DictationController {
     func interrupt(message: String, audible: Bool = true) async {
         if let termination { await termination.value; return }
         guard transition(.failure(message)) == .alert else { return }
+        activeTemplate = nil
         let token = session.generation
         let failedEngine = engine
         updates?.cancel(); idleTask?.cancel(); shouldAutoInsert = false
@@ -312,6 +338,7 @@ final class DictationController {
     }
     func clear() {
         guard !isBusy else { return }
+        templateFallback = nil
         shouldAutoInsert = false; processedText = ""; accumulator.reset(); rawText = ""; latestPartial = ""
         sessionID = UUID(); session.send(.clearIssue)
         statusMessage = session.state == .activated ? "Ready to dictate · microphone active" : "Ready"; publish()

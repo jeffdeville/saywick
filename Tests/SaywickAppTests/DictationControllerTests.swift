@@ -10,6 +10,7 @@ private final class TestEngine: LiveSpeechEngine {
     var archiveURL: URL?
     let updates: AsyncStream<SpeechEngineUpdate>
     let events: AsyncStream<SpeechEngineUpdate>.Continuation
+    var onStop: (() -> Void)?
     var finishes = 0
     var cancels = 0
     var prepareError: Error?
@@ -27,6 +28,7 @@ private final class TestEngine: LiveSpeechEngine {
     }
     func start() async throws { events.yield(.partial(text: "hello", receivedAt: Date())) }
     func stop() async throws {
+        onStop?()
         finishes += 1
         events.yield(.final(text: "hello world", endOfUtteranceLatencyMilliseconds: 10, receivedAt: Date()))
         events.finish()
@@ -89,6 +91,70 @@ final class DictationControllerTests: XCTestCase {
         XCTAssertEqual(history.entries.first?.runs.first?.cleanup, PostProcessorID.none)
         await c.shutdown()
     }
+    func testTemplateUsesFullEntryOnceEvenWithPolishOff() async {
+        var calls = 0
+        var d = dependencies()
+        d.cleanupEnabled = { false }
+        d.applyTemplate = { prompt, text in
+            calls += 1
+            XCTAssertEqual(prompt, "Group by day")
+            XCTAssertTrue(text.contains("morning"))
+            XCTAssertTrue(text.contains("hello world"))
+            return "# Journal\nA new day."
+        }
+        d.process = { text, options, _ in
+            XCTAssertEqual(options.processor, PostProcessorID.none)
+            return text
+        }
+        let controller = DictationController(history: history, dependencies: d)
+        controller.externalCleanupAuthorized = { true }
+        var options = DictationOptions()
+        options.processor = .openAILuna
+        await controller.start(options: options)
+        engines[0].events.yield(.final(text: "morning", endOfUtteranceLatencyMilliseconds: 1, receivedAt: Date()))
+        controller.selectTemplate(CleanupTemplate(name: "Journal", prompt: "Group by day"))
+        await controller.stop(insert: true)
+        XCTAssertEqual(controller.processedText, "# Journal\nA new day.")
+        XCTAssertEqual(history.entries.first?.runs.first?.cleanupInstructions, "Group by day")
+        await controller.start(options: options)
+        await controller.stop()
+        XCTAssertEqual(calls, 1)
+        XCTAssertNil(controller.activeTemplate)
+        await controller.shutdown()
+    }
+
+    func testTemplateFallsBackAfterRevocationOrProviderFailure() async throws {
+        let catalog = CleanupTemplates(defaults: defaults)
+        try catalog.save(CleanupTemplate(name: "Journal", prompt: "Add headings"))
+        let template = try XCTUnwrap(CleanupTemplates(defaults: defaults).items.first)
+        for revoke in [true, false] {
+            var authorized = true
+            var requests = 0
+            var d = dependencies()
+            d.cleanupEnabled = { false }
+            d.applyTemplate = { _, _ in
+                requests += 1
+                throw PostProcessingError.openAIUnavailable
+            }
+            let c = DictationController(history: history, dependencies: d)
+            c.externalCleanupAuthorized = { authorized }
+            var options = DictationOptions()
+            options.processor = .openAILuna
+            await c.start(options: options)
+            c.selectTemplate(template)
+            engines.last?.onStop = { if revoke { authorized = false } }
+            await c.stop(insert: true)
+            XCTAssertEqual(requests, revoke ? 0 : 1)
+            XCTAssertNotNil(c.templateFallback)
+            XCTAssertEqual(c.processedText, "Hello world.")
+            let run = try XCTUnwrap(history.entries.first(where: { $0.id == c.sessionID })?.runs.first)
+            XCTAssertEqual(run.cleanup, .rules)
+            XCTAssertEqual(run.cleanupInstructions, template.prompt)
+            XCTAssertTrue(run.rawText.contains("hello world"))
+            await c.shutdown()
+        }
+    }
+
     func testFinishInsertAndExpiryPreserveResult() async throws {
         let c = DictationController(history: history, dependencies: dependencies())
         await c.start(options: .init())

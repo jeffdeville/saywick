@@ -172,6 +172,9 @@ struct ContentView: View {
                 .font(.caption)
             Text("The keyboard Cleanup switch applies to dictations stopped from the keyboard, app, or shortcut. It does not affect History reprocessing.").font(.caption)
             if model.selectedPostProcessorID == .openAILuna {
+                NavigationLink("Cleanup templates") { CleanupTemplateSettings(catalog: model.templates) }
+                Text("Save prompts for formatting or rewriting a dictation with OpenAI.")
+                    .font(.caption)
                 SecureField("OpenAI API key", text: $openAIKey)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                 Button("Save API key") {
@@ -185,7 +188,7 @@ struct ContentView: View {
                 Text(keyMessage).font(.caption)
             }
             if model.selectedPostProcessorID.usesLanguageModel {
-                Text("Runs after Stop. Repairs sentence breaks across thinking pauses while preserving your words. Original text stays in History.")
+                Text("Regular Polish runs after Stop. Repairs sentence breaks across thinking pauses while preserving your words. Original text stays in History.")
                     .font(.caption)
                 TextField(
                     "Short formatting preference",
@@ -260,7 +263,7 @@ struct ContentView: View {
             if let error = model.customWordsError {
                 Text(error).foregroundStyle(.red).font(.caption)
             }
-            Text("Cleanup is optional; OpenAI cleanup sends transcript text to OpenAI when selected. Raw transcript keeps the recognizer’s wording plus your custom-word corrections. Faithful cleanup repairs punctuation and capitalization after Stop. Paragraphs and bullets are opt-in. Edits that add, omit or reorder words are rejected.")
+            Text("Cleanup is optional; OpenAI cleanup sends transcript text to OpenAI when selected. Raw transcript keeps the recognizer’s wording plus your custom-word corrections. Faithful cleanup repairs punctuation and capitalization after Stop. Paragraphs and bullets are opt-in. Regular Polish rejects edits that add, omit or reorder words. A selected OpenAI template may rewrite or summarize.")
                 .font(.caption)
         }
         .disabled(model.isBusy)
@@ -313,7 +316,7 @@ struct ContentView: View {
 
             NavigationLink("Privacy policy") {
                 ScrollView {
-                    Text("Saywick transcribes recordings on this device. If you select OpenAI cleanup, transcript text and relevant custom words are sent to OpenAI using your API key. Other cleanup options run on this device. There are no advertising or analytics SDKs.\n\nThe one-time speech model download connects to Hugging Face and its delivery providers, which receive ordinary connection information such as your IP address.\n\nFull Access lets the keyboard exchange commands and transcripts with Saywick locally. Basic typing works without Full Access. Only names you select and confirm in the Contacts picker are saved as custom words.\n\nHistory stores text and optional audio locally. Retention settings and deletion controls are in History; pinned recordings are exempt from automatic expiry. Previously saved recordings remain until deleted or expired. Copies you export or share are controlled by their destination app.\n\niOS may collect and share system diagnostics according to your Apple privacy settings. Saywick keeps a bounded local diagnostic log and Apple-provided performance/crash reports. You can choose to export these for support. Saywick does not upload diagnostic reports itself.")
+                    Text("Saywick transcribes recordings on this device. If you select OpenAI cleanup, transcript text and the selected cleanup instructions are sent to OpenAI. Regular Polish may also send relevant custom words using your API key. Other cleanup options run on this device. There are no advertising or analytics SDKs.\n\nThe one-time speech model download connects to Hugging Face and its delivery providers, which receive ordinary connection information such as your IP address.\n\nFull Access lets the keyboard exchange commands and transcripts with Saywick locally. Basic typing works without Full Access. Only names you select and confirm in the Contacts picker are saved as custom words.\n\nHistory stores text and optional audio locally. Retention settings and deletion controls are in History; pinned recordings are exempt from automatic expiry. Previously saved recordings remain until deleted or expired. Copies you export or share are controlled by their destination app.\n\niOS may collect and share system diagnostics according to your Apple privacy settings. Saywick keeps a bounded local diagnostic log and Apple-provided performance/crash reports. You can choose to export these for support. Saywick does not upload diagnostic reports itself.")
                         .padding().textSelection(.enabled)
                 }.navigationTitle("Privacy policy")
             }

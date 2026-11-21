@@ -66,31 +66,59 @@ enum TranscriptPostProcessor {
             let words = preferredWords.filter { context.localizedCaseInsensitiveContains($0) }
             guard chunk.text.utf8.count <= TranscriptCleanup.targetByteLimit,
                   words.joined(separator: ", ").utf8.count <= 500 else { throw PostProcessingError.inputTooLarge }
-            var request = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
-            request.httpMethod = "POST"
-            request.timeoutInterval = 20
-            request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONSerialization.data(withJSONObject: [
-                "model": "gpt-6-luna", "reasoning_effort": "none",
-                "messages": [
-                    ["role": "system", "content": TranscriptCleanup.instructions(structured: false)],
-                    ["role": "user", "content": TranscriptCleanup.prompt(chunk, preference: preference, preferredWords: words)]
-                ]
-            ])
-            let (data, response) = try await URLSession.shared.data(for: request)
-            try Task.checkCancellation()
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
-                  let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let choices = json["choices"] as? [[String: Any]],
-                  let message = choices.first?["message"] as? [String: Any],
-                  let content = message["content"] as? String else { throw PostProcessingError.openAIUnavailable }
+            let content = try await openAICompletion(
+                key: key,
+                instructions: TranscriptCleanup.instructions(structured: false),
+                input: TranscriptCleanup.prompt(chunk, preference: preference, preferredWords: words)
+            )
             let cleaned = TranscriptOutputSanitizer.clean(content)
             guard TranscriptCleanup.preservesWords(source: chunk.text, candidate: cleaned),
                   !TranscriptCleanup.hasListMarkup(cleaned) else { throw PostProcessingError.wordingChanged }
             output.append(cleaned.split(whereSeparator: \.isWhitespace).joined(separator: " "))
         }
         return RuleBasedCleaner.clean(output.joined(separator: " "))
+    }
+
+    /// A named prompt operates on the entire finished dictation and owns its output format.
+    static func applyTemplate(
+        _ prompt: String, to transcript: String,
+        readKey: () -> String? = OpenAIKeyStore.read,
+        send: (URLRequest) async throws -> (Data, URLResponse) = { try await URLSession.shared.data(for: $0) }
+    ) async throws -> String {
+        guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return "" }
+        guard let key = readKey(), !key.isEmpty else { throw PostProcessingError.openAIUnavailable }
+        return try await openAICompletion(key: key, instructions: prompt, input: transcript, send: send)
+    }
+
+    private static func openAICompletion(
+        key: String, instructions: String, input: String,
+        send: (URLRequest) async throws -> (Data, URLResponse) = { try await URLSession.shared.data(for: $0) }
+    ) async throws -> String {
+        try Task.checkCancellation()
+        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 20
+        request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "model": "gpt-6-luna", "reasoning_effort": "none",
+            "messages": [
+                ["role": "system", "content": instructions],
+                ["role": "user", "content": input]
+            ]
+        ])
+        let (data, response) = try await send(request)
+        try Task.checkCancellation()
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let choices = json["choices"] as? [[String: Any]], let choice = choices.first,
+              choice["finish_reason"] as? String == "stop",
+              let message = choice["message"] as? [String: Any], message["refusal"] as? String == nil,
+              let content = message["content"] as? String,
+              !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw PostProcessingError.openAIUnavailable
+        }
+        return content
     }
 
     private static func processWithFoundationModels(
