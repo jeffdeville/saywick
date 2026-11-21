@@ -34,12 +34,28 @@ struct SharedContainerStore {
         self.rootURL = rootURL
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
-        self.encoder.dateEncodingStrategy = .iso8601
-        self.decoder.dateDecodingStrategy = .iso8601
+        self.encoder.dateEncodingStrategy = .millisecondsSince1970
+        self.decoder.dateDecodingStrategy = Self.dateDecoding
+    }
+
+    private static var dateDecoding: JSONDecoder.DateDecodingStrategy {
+        .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            if let milliseconds = try? container.decode(Double.self) { return Date(timeIntervalSince1970: milliseconds / 1000) }
+            let string = try container.decode(String.self)
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatter.date(from: string) { return date }
+            formatter.formatOptions = [.withInternetDateTime]
+            guard let date = formatter.date(from: string) else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid session date")
+            }
+            return date
+        }
     }
 
     func write(snapshot: SharedSessionSnapshot) throws {
-        try encoder.encode(snapshot).write(to: snapshotURL, options: .atomic)
+        try encoder.encode(snapshot).write(to: snapshotURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 
     func readSnapshot() throws -> SharedSessionSnapshot? {
@@ -50,25 +66,51 @@ struct SharedContainerStore {
         )
     }
 
-    /// Immediately removes a transcript after the keyboard inserts it. The
-    /// session check prevents an older keyboard refresh from clearing new work.
-    func clearSnapshot(ifSessionID sessionID: UUID) throws {
-        guard var snapshot = try readSnapshot(), snapshot.sessionID == sessionID else { return }
-        snapshot.revision += 1
-        snapshot.phase = .idle
-        snapshot.keyboardSessionExpiresAt = nil
-        snapshot.keyboardSessionActive = false
-        snapshot.finalizedText = ""
-        snapshot.partialText = ""
-        snapshot.processedText = ""
-        snapshot.message = "Ready"
-        snapshot.shouldAutoInsert = false
-        snapshot.updatedAt = Date()
-        try write(snapshot: snapshot)
+    init(rootURL: URL) throws {
+        self.rootURL = rootURL
+        try FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        encoder = JSONEncoder(); decoder = JSONDecoder()
+        encoder.dateEncodingStrategy = .millisecondsSince1970; decoder.dateDecodingStrategy = Self.dateDecoding
+    }
+
+    func write(receipt: ResultReceipt) throws {
+        let folder = rootURL.appendingPathComponent("result-receipts")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try encoder.encode(receipt).write(to: folder.appendingPathComponent(receipt.resultID.uuidString + ".json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+    func readReceipt(_ id: UUID) throws -> ResultReceipt? {
+        let url = rootURL.appendingPathComponent("result-receipts/" + id.uuidString + ".json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return try decoder.decode(ResultReceipt.self, from: Data(contentsOf: url))
+    }
+
+    func write(correctionContext: VocabularyCorrectionContext) throws {
+        try encoder.encode(correctionContext).write(to: rootURL.appendingPathComponent("correction-context.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+
+    func removeCorrectionContext() throws {
+        let url = rootURL.appendingPathComponent("correction-context.json")
+        if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
+    }
+
+    func readCorrectionContext() throws -> VocabularyCorrectionContext? {
+        let url = rootURL.appendingPathComponent("correction-context.json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return try decoder.decode(VocabularyCorrectionContext.self, from: Data(contentsOf: url))
+    }
+
+    func cleanupEnabled() throws -> Bool {
+        let url = rootURL.appendingPathComponent("cleanup-enabled.json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return true }
+        return try decoder.decode(Bool.self, from: Data(contentsOf: url))
+    }
+
+    func setCleanupEnabled(_ enabled: Bool) throws {
+        try encoder.encode(enabled).write(to: rootURL.appendingPathComponent("cleanup-enabled.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 
     func write(command: VoiceCommand) throws {
-        try encoder.encode(command).write(to: commandURL, options: .atomic)
+        try encoder.encode(command).write(to: commandURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 
     func readCommand() throws -> VoiceCommand? {
@@ -80,7 +122,7 @@ struct SharedContainerStore {
         // Preserve subsecond ordering against the recording start time.
         let presenceEncoder = JSONEncoder()
         presenceEncoder.dateEncodingStrategy = .millisecondsSince1970
-        try presenceEncoder.encode(presence).write(to: presenceURL, options: .atomic)
+        try presenceEncoder.encode(presence).write(to: presenceURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 
     func readKeyboardPresence() throws -> KeyboardPresence? {

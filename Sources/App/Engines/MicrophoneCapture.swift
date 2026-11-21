@@ -8,19 +8,20 @@ import VoiceKeyboardCore
 @MainActor
 final class MicrophoneCapture {
     static let shared = MicrophoneCapture()
-    private let engine = AVAudioEngine()
+    private var engine = AVAudioEngine()
     private let delivery = MicrophoneDelivery()
-    private(set) var keepsSessionAlive = false
     private var tapped = false
     var isRunning: Bool { engine.isRunning }
 
     func configure() throws {
         guard !engine.isRunning else { return }
+        RecordingErrorSound.shared.stop()
         let session = AVAudioSession.sharedInstance()
         // Capture has no playback graph; request only microphone hardware.
         try session.setCategory(.record, mode: .measurement)
         do { try session.setActive(true) }
         catch {
+            DiagnosticLog.error("audio.capture", error)
             let failure = error as NSError
             ActivationDiagnostics.shared.record("Microphone activation failed: \(failure.domain)/\(failure.code)")
             throw error
@@ -29,7 +30,6 @@ final class MicrophoneCapture {
 
     func beginSession() throws {
         try start()
-        keepsSessionAlive = true
     }
 
     func setConsumer(_ consumer: @escaping MicrophoneDelivery.Consumer) {
@@ -56,6 +56,7 @@ final class MicrophoneCapture {
         engine.prepare()
         do { try engine.start() }
         catch {
+            DiagnosticLog.error("audio.capture", error)
             let failure = error as NSError
             ActivationDiagnostics.shared.record("Microphone engine failed: \(failure.domain)/\(failure.code)")
             throw error
@@ -66,18 +67,21 @@ final class MicrophoneCapture {
     /// the same input graph and audio session across finalization and idle time.
     func stop() {
         removeConsumer()
-        guard !keepsSessionAlive else { return }
-        shutdown()
+        // Only the recording controller releases the hardware session.
     }
 
     func endSession() {
-        keepsSessionAlive = false
         shutdown()
     }
 
     func deactivateIfUnused() {
-        guard !keepsSessionAlive, !engine.isRunning else { return }
+        guard !engine.isRunning else { return }
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    func resetAfterMediaServicesReset() {
+        shutdown()
+        engine = AVAudioEngine()
     }
 
     private func shutdown() {

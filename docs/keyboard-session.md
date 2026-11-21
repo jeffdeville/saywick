@@ -18,14 +18,17 @@ has both. A heartbeat older than five seconds makes the session unavailable to t
 keyboard, even if its deadline has not passed. Old snapshot and History formats
 remain decodable. Clearing an inactive shared snapshot clears both session fields.
 
-Dictation is the default panel whenever the keyboard appears. ABC/Voice switches panels. QWERTY, single-use
+The resting keyboard opens with QWERTY and a toolbar for More, Undo insertion,
+Polish, and the microphone. Each appearance resets the symbol page to letters.
+Active dictation, processing, and unconsumed results show the transcript instead.
+Insertion returns to typing and exposes Fix a word. QWERTY, single-use
 Shift, numbers, punctuation, space, Return, held delete, and cursor dragging operate
 without Full Access. Full Access is needed only for local dictation communication.
-When inactive, Open Saywick uses a user-tapped SwiftUI URL action to request
+When inactive, the mic uses a user-tapped SwiftUI URL action to request
 `saywick://start?source=keyboard`. Rejection displays
 inline fallback instructions. No refresh or timer opens the app.
 A single primary action reflects access, freshness, preparation, recording, finalization,
-meeting capture, and idle readiness. More expands auxiliary actions inline; keyboard controls never present modal alerts.
+and idle readiness. More expands auxiliary actions inline; keyboard controls never present modal alerts.
 
 Physical-device release checks: complete a dictation and wait two minutes, confirm
 orange microphone indicator disappears and text remains insertable; restart before
@@ -35,12 +38,7 @@ letters, Shift, symbols, delete, globe, and Return with Full Access disabled in 
 
 ## Meeting sessions
 
-Dedicated meeting recording is deferred. This section describes the implementation in this checkout. [Product scope](engineering.md#product-promises)
-
-Meeting mode has no readiness lease. It streams microphone audio to a retained WAV,
-ignores keyboard dismissal, and has a four-hour recording limit. Stop closes the file
-and saves a History entry without invoking Parakeet or cleanup. Transcription is an
-explicit later History action. Clear and Restart are disabled during meetings.
+Build 1.0 (5) removed dedicated meeting recording. History still reads earlier recordings. The September 7 verification below describes an earlier build. [Release record](app-store-release.md)
 
 A single AppModel.shared is used by both the SwiftUI scene and recording intents.
 It owns long-lived command/interruption tasks. The startup task removes orphaned
@@ -75,23 +73,45 @@ establish those results.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Checking: Keyboard appears in voice mode
-    Checking --> ActivationNeeded: No fresh recorder / microphone off
-    Checking --> Ready: Fresh ready session
-    Checking --> Recording: Existing dictation
-    Ready --> Starting: Dictate
-    Starting --> Recording: App confirms capture
-    Recording --> Finishing: Stop & Insert
-    Finishing --> Ready: Insert once, preserve session ID
-    Ready --> ActivationNeeded: Two minutes idle / interruption
+    [*] --> Inactive
+    Inactive --> Activated: activate
+    Activated --> Transcribing: start
+    Transcribing --> PostProcess: stopAndInsert
+    Transcribing --> Activated: cancel
+    PostProcess --> Activated: complete / offer insertion
+    Activated --> Inactive: timeout / deactivate
 ```
 
-Insertion no longer sends Clear to the app while readiness is active. That command
-rotated the session ID and could invalidate a quickly issued Start. Inserted IDs
-remain tracked locally to prevent duplicate insertion. Each refresh re-evaluates
-freshness and deadlines, even without a new revision. An issued action displays a
-pending state until a newer snapshot confirms the transition (or five seconds
-elapse). Opening the keyboard does not silently start audio capture.
+`DictationSession` is the authoritative state. `DictationController` owns its
+transitions and microphone lifetime. A single pending operation describes
+activation, start, cancellation, or release; controls do not claim readiness while
+those operations are settling. Fatal errors and interruptions preserve recovery
+work, cancel insertion, release capture, and attempt one descending error cue.
+They return to Inactive with a persistent reason, without automatically restarting.
+Disabling Keep keyboard ready returns completed/cancelled dictations to Inactive.
+
+Cancel does not finalize recognition or post-process text. It preserves existing
+recovery audio/history with a Cancelled status. Restart composes Cancel and Start.
+
+Results are independent of microphone readiness. Stop & Insert offers a completed
+result; insertion occurs only when the keyboard is available. The keyboard writes
+receipts after insertion or dismissal and never rewrites the app's session snapshot.
+Receipts survive keyboard recreation. Host insertion and receipt persistence cannot
+be atomic across processes, so crash-proof exactly-once insertion is not promised.
+Old snapshots remain readable. New commands are acknowledged by ID, including
+rejections; a timeout offers retry with the same ID rather than inventing a state.
+
+The app observes audio interruptions, route changes, engine configuration changes,
+and media-services reset. Invalid/stopped capture ends the session. Audio archive
+writes and conversion run on an audio worker; recording History writes run on a
+separate serial worker. Active archives use complete-unless-open protection; shared
+metadata uses protection until first unlock so it can be reopened while locked.
+
+Error sound playback uses the current output and media volume; a car route, zero
+volume, or system interruption can make it inaudible. The error message remains
+available. Playback is cancelled before starting capture or History playback.
+Physical car and call interruption behavior requires device verification; a
+simulated notification does not establish that a particular car route is audible.
 
 ## Dictionary
 
@@ -108,7 +128,8 @@ review before adding. Only selected given/family/full names enter the dictionary
 no address-book enumeration, phone numbers, or emails are stored. Duplicates are
 removed case-insensitively. Imported names can be edited/deleted in the word list.
 
-The keyboard background is transparent to the system keyboard surface. Voice mode
-requests 250 points and typing 286, with 44 more when the inline controls expand.
+The keyboard uses a light gray or dark background with rounded keys. The transcript
+layout requests 250 points and typing 274, with extra height for visible status,
+correction, or inline menu rows.
 The bottom row is pinned six points from the extension edge; iOS owns the separate
 globe/microphone area below the extension.

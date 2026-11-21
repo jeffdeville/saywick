@@ -2,16 +2,17 @@
 
 Your words. Your way.
 
-An open-source iOS voice keyboard with on-device Parakeet transcription, local
+An open-source iOS voice keyboard with on-device Parakeet transcription, optional local or OpenAI
 cleanup, a basic typing keyboard, and retained audio for playback and retranscription.
-Built for personal testing on iPhone 16 Pro; targets iOS 26. This is a prototype,
-not an App Store release. The Saywick App Store name has not been reserved.
+Targets iOS 26. App Store preparation is tracked in `docs/app-store-release.md`.
+The Saywick App Store name has not yet been verified as available.
 
 ## Features
 
 - On-device Parakeet English transcription after a one-time 731 MB download.
-- Optional faithful punctuation/capitalization cleanup with Apple Intelligence,
-  opt-in paragraphs and bullets, simple local formatting, or raw output.
+- Fresh installs default to Faithful cleanup with Apple Intelligence for punctuation and capitalization.
+  Other options include paragraphs and bullets, OpenAI GPT-6 Luna, simple local formatting, and raw output.
+- A keyboard cleanup switch applies to dictations stopped from the keyboard, app, or shortcut; History reprocessing uses its selected cleanup independently.
 - Word-list dictionary and optional exact corrections, applied before cleanup.
 - Local history with original and final text, engine metadata, saved configuration,
   independent comparison runs, pinning, search, and deletion.
@@ -19,9 +20,8 @@ not an App Store release. The Saywick App Store name has not been reserved.
   enabled by default (7 days); text defaults to 30 days. Pins exempt both from expiry.
 - Copy text, restore original/final text to the keyboard, export text or a Markdown
   comparison, and share text to Notes through the standard iOS share sheet.
-- Start Dictation, Record Meeting, and background Stop Recording App Shortcuts;
+- Start Dictation and background Stop Recording App Shortcuts;
   assign them to the Action Button, Back Tap, or a custom Shortcut.
-- Meeting audio recording up to four hours, with local transcription afterward.
 - Live Activity / Dynamic Island recording status and a Stop button, without transcript contents.
 - Keyboard Stop & Insert, Clear/Restart, guarded Undo Insertion, held delete, and
   horizontal cursor movement by dragging on the space key. Basic QWERTY typing, Shift, numbers, and punctuation work without Full Access.
@@ -33,16 +33,16 @@ and current transcript text through an App Group when Full Access is enabled.
 Typing needs neither Full Access nor a model download.
 
 Parakeet recognizes English on device after its one-time model download. There are
-no cloud transcription engines, credentials, accounts, or service subscriptions.
-Cleanup and custom-word correction also run locally. Existing History retains its
+no cloud transcription engines. Custom-word correction and Apple cleanup run locally.
+If selected, OpenAI cleanup sends transcript text, formatting preferences, and relevant
+custom words to OpenAI using an API key stored in the app Keychain. Existing History retains its
 original engine labels; old recordings can be transcribed again with Parakeet.
 Legacy provider protocol helpers under VoiceKeyboardCore support the historical
-command-line benchmarks only; the iOS app has no provider client or upload path.
+command-line benchmarks only; they are not used for iOS transcription.
 
 History lives in Application Support, excluded from backups, with iOS file
 protection available after first unlock so background dictation can write safely.
-Retained audio is a normalized recording, not necessarily the source file's original
-encoding. Retention
+Retained audio is normalized for playback and retranscription. Retention
 is enforced when History refreshes or the app starts, not by a guaranteed background
 timer. Turning retention off only affects future microphone recordings.
 
@@ -75,12 +75,14 @@ choose its own identifiers before the first public release.
 ## Everyday dictation
 
 Keep keyboard ready is enabled by default. Start listening in Saywick once, then
-switch to the destination app and select the Saywick keyboard. Tap **Stop & Insert**
-to finish that dictation, then **Dictate** for the next one without leaving
+switch to the destination app and select the Saywick keyboard. Tap the **stop icon**
+to finish and insert that dictation, then the **mic icon** for the next one without leaving
 the destination app. Each dictation has its own transcript and History entry.
-The keyboard opens in dictation mode. **ABC** switches to typing; **Voice** returns.
-One primary button reflects readiness, recording, and finishing. **Open Saywick**
-requests a URL handoff to activate the microphone in the app. If iOS rejects the
+The keyboard opens with QWERTY keys and a toolbar containing More, Undo insertion,
+**Polish**, and the mic. **123** opens symbols. Active dictation and unfinished results
+show the transcript; insertion returns to typing with **Fix a word** available.
+Polish toggles cleanup. When the microphone is inactive, tapping the mic
+requests a URL handoff to activate it in Saywick. If iOS rejects the
 request, inline instructions explain the Shortcut fallback. More expands inline.
 
 After each completed dictation, readiness lasts **2 minutes idle**. Starting a new
@@ -95,13 +97,10 @@ Turn off Keep keyboard ready before starting if you want the previous single-rec
 behavior: Stop releases the microphone, and hiding or switching keyboards after using
 the Saywick keyboard stops recording after a 3-second grace period.
 
-The keyboard's Start button starts another dictation only while the microphone is
-ready. Otherwise it explains how to activate Saywick through the app or Shortcuts;
-it never launches the containing app. History playback asks you to end readiness first.
+The mic starts another dictation directly while the microphone is ready.
+Otherwise a user tap requests activation in Saywick; polling never opens the app. History playback asks you to end readiness first.
 
 ## Background activation and meetings
-
-Dedicated meeting recording is outside current product goals. The implementation described below is present in this checkout.
 
 In Saywick, tap **Set up background dictation** to grant microphone access and
 prepare Parakeet once. Enable Live Activities in iOS Settings for Saywick. Then
@@ -112,19 +111,8 @@ activation failed on the test iPhone. Dictation can restart without opening the 
 while its microphone is still ready. A missing model produces setup instructions
 instead of downloading weights during a shortcut.
 
-**Record meeting** in the app or **Start Saywick meeting** in Shortcuts (which opens
-Saywick to activate the microphone) records
-microphone audio straight to local storage, without running transcription. It does
-not require Parakeet to be downloaded. Meetings always retain audio (even when
-ordinary dictation audio retention is off), and follow History's normal expiry/pin
-settings afterward. Recording ignores keyboard dismissal and the dictation idle
-timer, and stops at four hours. PCM16 mono audio uses about 115 MB per hour.
-
-Stop through the app, the Live Activity/Dynamic Island Stop button, or **Stop Saywick
-recording** in Shortcuts. The Stop shortcut also releases dictation readiness.
-Use History > recording > **Transcribe with Parakeet** afterward, keeping Saywick
-open while file transcription runs. Meeting mode does not identify speakers or
-produce meeting summaries. It captures the microphone, not other apps' call audio.
+The current release candidate removed the dedicated meeting recording button and
+shortcut. Existing meeting recordings remain readable in History.
 
 The recorder and command/interruption observers are process-owned, so they do not
 rely on a SwiftUI screen task remaining alive. Background starts require microphone
@@ -134,20 +122,20 @@ automatically after a process termination or interruption.
 
 ## Saved recordings
 
-Recordings imported by earlier versions remain available in History under the usual retention settings.
-
 Open History > a recording to play audio, copy text, restore text to the keyboard,
 or **Transcribe with Parakeet**. Each run preserves earlier results and settings.
-**Reprocess original** applies current local cleanup and custom words without
+**Reprocess original** applies the selected cleanup and custom words without
 transcribing again. Existing recordings from retired engines remain readable.
+
+Recordings imported by earlier versions remain available in History under the usual retention settings.
 
 ## Final text cleanup
 
 Live text is a draft. Speech engines may interpret a thinking pause as a sentence
 boundary; Saywick preserves that original output in History. Choose **Faithful
 cleanup (Apple Intelligence)** to repair punctuation and capitalization after Stop,
-using the surrounding words to reconsider those boundaries. Existing cleanup
-selections are preserved; new installs default to Faithful cleanup. Raw and Fast
+using the surrounding words to reconsider those boundaries. Upgrades should preserve your saved cleanup choice, including Off.
+A known upgrade issue can switch Off to Faithful once if your installation went through an earlier cleanup migration. Raw and Fast
 local rules do not perform semantic repair.
 
 Faithful cleanup preserves every word in order, including repetitions and fillers.
@@ -191,7 +179,7 @@ Edit or delete entries directly in the word list.
 
 ## Verification
 
-The [engineering guide](docs/engineering.md) records product scope, release authority, and contributor guidance.
+The [engineering guide](docs/engineering.md) maps the source, tools, and contributor guidance.
 
 ```sh
 make test
@@ -226,3 +214,7 @@ runtime. All existing installs now select Parakeet for new audio.
 On a fresh checkout, run `make parakeet-bootstrap` before generating or building
 the Xcode project (requires CMake and Xcode). See [the iOS experiment](docs/parakeet-ios.md)
 for model details, limitations, and the opt-in phone benchmark.
+
+Crash reports: `make diagnostics` checks the paired iPhone. See
+[the crash-report workflow](docs/crash-report-workflow.md) for on-demand diagnostics,
+triage, regression testing, symbol preservation, and verified deployment.

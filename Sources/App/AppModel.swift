@@ -4,87 +4,28 @@ import Observation
 import UIKit
 import VoiceKeyboardCore
 
-@MainActor
-@Observable
+@MainActor @Observable
 final class AppModel {
     static let shared = AppModel()
-    enum RecordingKind: String { case dictation, meeting }
-    private(set) var recordingKind: RecordingKind = .dictation
-    var isMeetingRecording: Bool { recordingKind == .meeting && (phase == .preparing || phase == .listening || phase == .finalizing) }
-    @ObservationIgnored private var startupTask: Task<Void, Never>?
-    @ObservationIgnored private var commandTask: Task<Void, Never>?
-    @ObservationIgnored private var interruptionTask: Task<Void, Never>?
-
-    // Intent and UI share one recorder, even on a launch without a scene.
-    func startServices() async {
-        if startupTask == nil {
-            startupTask = Task { await recordingActivity.removeOrphanedActivities() }
-        }
-        await startupTask?.value
-        if commandTask == nil { commandTask = Task { await monitorKeyboardCommands() } }
-        if interruptionTask == nil { interruptionTask = Task { await watchInterruptions() } }
-    }
-
-    func prepareBackgroundDictation() async {
-        guard !isBusy, !history.isWorking, !isKeyboardSessionActive else { return }
-        isPreparingBackground = true
-        defer { isPreparingBackground = false }
-        do {
-            guard await microphoneIsAuthorized() else { throw SpeechEngineError.microphoneDenied }
-            statusMessage = "Downloading and verifying Parakeet for background dictation…"
-            _ = try await ParakeetModelStore.shared.modelURL()
-            statusMessage = "Setup complete. Use Start dictation in Shortcuts. Saywick opens when the microphone needs activation."
-        } catch { statusMessage = error.localizedDescription }
-    }
-
-    var canStartDictationInBackground: Bool {
-        MicrophoneCapture.shared.isRunning && isKeyboardSessionActive &&
-            (keyboardSessionExpiresAt.map { $0 > Date() } ?? true)
-    }
-
-    func startFromShortcut(kind: RecordingKind) async throws {
-        await startServices()
-        guard !isBusy, !history.isWorking else {
-            throw SpeechEngineError.unavailable("A recording or transcription is already in progress. Stop it before starting another.")
-        }
-        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
-            throw SpeechEngineError.unavailable("Open Saywick and allow microphone access before using background recording.")
-        }
-        ActivationDiagnostics.shared.record(kind == .meeting ? "Background meeting intent invoked" : "Background dictation intent invoked")
-        await startRecording(kind: kind, fromIntent: true)
-        guard phase == .listening else { throw SpeechEngineError.unavailable(statusMessage) }
-    }
-
-    func stopFromShortcut() async throws {
-        await startServices()
-        guard phase == .listening || isKeyboardSessionActive else {
-            throw SpeechEngineError.unavailable("No active recording. Start Saywick dictation or a meeting first.")
-        }
-        // A Stop shortcut also releases idle readiness, unlike Stop & Insert.
-        await endKeyboardSession(message: "Microphone off — recording saved in History")
-        if phase == .failed { throw SpeechEngineError.unavailable(statusMessage) }
-    }
-
-    var history = HistoryModel()
+    let recorder: DictationController
+    var history: HistoryModel
+    var correctionContext: VocabularyCorrectionContext?
+    var correctionError: String?
     var selectedTab = 0
-    var keepKeyboardReady: Bool {
-        didSet { defaults.set(keepKeyboardReady, forKey: "keepKeyboardReady") }
-    }
-    private(set) var keyboardSessionExpiresAt: Date?
-    private(set) var isKeyboardSessionActive = false
-    private var endingSession = false
-    private var pendingAutoInsert = false
-    private var operationID = UUID()
-    private var lastHeartbeat = Date.distantPast
-    var recordingStartedAt: Date?
-    private var keyboardLifecycle: KeyboardRecordingLifecycle?
-    @ObservationIgnored private let recordingActivity = RecordingActivity()
-    private var originalText = ""
-    private var latestPartial = ""
-    private var failureCleanup = false
-    private var isPreparingBackground = false
-    private var resettingTranscript = false
-    private var appliedCleanup: PostProcessorID?
+    var keepKeyboardReady: Bool { didSet { defaults.set(keepKeyboardReady, forKey: "keepKeyboardReady") } }
+    var bridgeMessage = "Checking keyboard bridge…"
+    @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private var sharedStore: SharedContainerStore?
+    @ObservationIgnored private var commandTask: Task<Void, Never>?
+    @ObservationIgnored private var observers: [Task<Void, Never>] = []
+    @ObservationIgnored private var startupTask: Task<Void, Never>?
+    private var acknowledgments: [UUID: CommandAcknowledgment] = [:]
+    private var acknowledgment: CommandAcknowledgment?
+    private var revision = 0
+    private let servicesEnabled: Bool
+    private var setupTask: Task<Void, Never>?
+    private var setupMessage: String?
+
     var customWordsText: String {
         didSet { defaults.set(customWordsText, forKey: "customWords") }
     }
@@ -105,29 +46,17 @@ final class AppModel {
         didSet { defaults.set(customCleanupInstructions, forKey: Keys.cleanupInstructions) }
     }
 
-    var phase: SharedSessionPhase = .idle
-    var statusMessage = "Ready"
-    var preparationProgress: Double?
-    var processedText = ""
-    var bridgeMessage = "Checking keyboard bridge…"
-
-    @ObservationIgnored private let defaults: UserDefaults
-    private var accumulator = TranscriptAccumulator()
-    @ObservationIgnored private var engine: (any LiveSpeechEngine)?
-    @ObservationIgnored private var updateTask: Task<Void, Never>?
-    @ObservationIgnored private var lastCommandID: UUID?
-    @ObservationIgnored private var isHandlingSpokenCommand = false
-    @ObservationIgnored private var sessionID = UUID()
-    @ObservationIgnored private var revision = 0
-    @ObservationIgnored private var sharedStore: SharedContainerStore?
-
     private enum Keys {
         static let engine = "selectedEngine"
         static let processor = "selectedPostProcessor"
         static let cleanupInstructions = "cleanupInstructions"
     }
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, history: HistoryModel? = nil, dependencies: DictationController.Dependencies = .init(), bridge: SharedContainerStore? = nil) {
+        self.servicesEnabled = dependencies.activities
+        let history = history ?? HistoryModel(defaults: defaults)
+        self.history = history
+        self.recorder = DictationController(history: history, dependencies: dependencies)
         self.defaults = defaults
         self.keepKeyboardReady = defaults.object(forKey: "keepKeyboardReady") == nil
             ? true : defaults.bool(forKey: "keepKeyboardReady")
@@ -138,6 +67,14 @@ final class AppModel {
             ? true : defaults.bool(forKey: "customWordsEnabled")
         // Old engine identifiers remain decodable in History, but all new audio uses Parakeet.
         defaults.set(SpeechEngineID.parakeetStreaming.rawValue, forKey: Keys.engine)
+        // Undo the temporary release-preparation opt-out once. Preserve later choices.
+        if !defaults.bool(forKey: "onDeviceCleanupDefaultV2") {
+            if defaults.bool(forKey: "cleanupOptInMigrationV1"),
+               defaults.string(forKey: Keys.processor) == PostProcessorID.none.rawValue {
+                defaults.set(PostProcessorID.foundationModels.rawValue, forKey: Keys.processor)
+            }
+            defaults.set(true, forKey: "onDeviceCleanupDefaultV2")
+        }
         self.selectedPostProcessorID = PostProcessorID(
             rawValue: defaults.string(forKey: Keys.processor) ?? ""
         ) ?? .foundationModels
@@ -148,253 +85,186 @@ final class AppModel {
         defaults.set(customWordsText, forKey: "customWords")
 
         do {
-            self.sharedStore = try SharedContainerStore()
-            self.lastCommandID = try self.sharedStore?.readCommand()?.id
+            self.sharedStore = defaults === UserDefaults.standard ? try bridge ?? SharedContainerStore() : bridge
+
+            if let snapshot = try self.sharedStore?.readSnapshot() { recorder.restoreResult(snapshot) }
             self.bridgeMessage = "Keyboard bridge ready"
         } catch {
+            DiagnosticLog.error("bridge.initialize", error)
             self.bridgeMessage = error.localizedDescription
         }
+        recorder.onChange = { [weak self] in self?.publishSnapshot() }
     }
 
-    var transcript: String { accumulator.currentText }
-    var finalizedTranscript: String { accumulator.finalizedText }
-    var metrics: SpeechMetrics { accumulator.metrics }
+    var phase: SharedSessionPhase { recorder.phase }
+    var statusMessage: String { setupMessage ?? recorder.statusMessage }
+    var preparationProgress: Double? { recorder.preparationProgress }
+    var processedText: String { recorder.processedText }
+    var transcript: String { recorder.transcript }
+    var finalizedTranscript: String { recorder.finalizedTranscript }
+    var metrics: SpeechMetrics { recorder.metrics }
+    var isBusy: Bool { recorder.isBusy || setupTask != nil }
+    var canStop: Bool { recorder.canStop }
+    var isKeyboardSessionActive: Bool { recorder.isKeyboardSessionActive }
+    var keyboardSessionExpiresAt: Date? { recorder.keyboardSessionExpiresAt }
+    var recordingStartedAt: Date? { recorder.recordingStartedAt }
+    var canStartDictationInBackground: Bool { recorder.canStartInBackground }
+    private var options: DictationOptions { DictationOptions(keepReady: keepKeyboardReady,
+        processor: selectedPostProcessorID, instructions: customCleanupInstructions,
+        vocabulary: customWordsEnabled ? customWordsText : "") }
 
-    var isBusy: Bool {
-        if failureCleanup || endingSession || isPreparingBackground { return true }
-        switch phase {
-        case .preparing, .listening, .finalizing:
-            return true
-        case .idle, .ready, .failed:
-            return false
-        }
+    func startRecording(fromIntent: Bool = false) async {
+        await startServices()
+        guard !isBusy else { return }
+        setupMessage = nil
+        await recorder.start(options: options, fromIntent: fromIntent)
     }
-
-    var canStop: Bool {
-        phase == .listening
+    func stopRecording(shouldAutoInsert: Bool = false) async { await recorder.stop(insert: shouldAutoInsert) }
+    func cancelRecording() async { await recorder.cancel() }
+    func restartTranscript() { Task { await recorder.cancel(restart: true) } }
+    func clear() { if recorder.canStop { restartTranscript() } else { recorder.clear() } }
+    func endKeyboardSession(message: String = "Session ended — open Saywick to activate again", unexpected: Bool = false) async {
+        if unexpected { await recorder.interrupt(message: message) }
+        else { await recorder.end(message: message) }
     }
-
-    func startRecording(kind: RecordingKind = .dictation, fromIntent: Bool = false) async {
-        guard !isBusy, !history.isWorking else { return }
-        if let expiry = keyboardSessionExpiresAt, expiry <= Date() {
-            await endKeyboardSession(message: "Session expired — activate again in Saywick")
-        }
-        if kind == .dictation, let customWordsError {
-            fail(with: SpeechEngineError.unavailable(customWordsError))
-            return
-        }
-
-        if kind == .meeting, isKeyboardSessionActive {
-            await endKeyboardSession()
-        }
-        recordingKind = kind
-        operationID = UUID()
-        let operation = operationID
-        pendingAutoInsert = false
-        sessionID = UUID()
-        revision = 0
-        accumulator.reset()
-        originalText = ""; latestPartial = ""
-        appliedCleanup = nil
-        processedText = ""
-        preparationProgress = nil
-        keyboardSessionExpiresAt = nil
-        phase = .preparing
-        statusMessage = kind == .meeting ? "Preparing meeting recording…" : "Preparing Parakeet…"
-
-        keyboardLifecycle = KeyboardRecordingLifecycle(startedAt: Date())
-        let engine = LiveSpeechEngineFactory.make(allowModelDownload: !fromIntent, meeting: kind == .meeting)
-        self.engine = engine
-        updateTask?.cancel()
-        updateTask = Task { [weak self] in
-            for await update in engine.updates {
-                guard !Task.isCancelled else { return }
-                self?.handle(update)
-            }
-        }
-        publishSnapshot()
-
-        do {
-            if engine.requiresMicrophoneAuthorization {
-                guard await microphoneIsAuthorized() else { throw SpeechEngineError.microphoneDenied }
-            }
-            guard operationID == operation, phase == .preparing else { return }
-            // AudioRecordingIntent requires a Live Activity before audio begins.
-            // LiveActivityIntent permits requesting it while backgrounded.
-            try recordingActivity.start(engine: kind == .meeting ? "Meeting · audio saved locally" : selectedEngineID.displayName,
-                                        phase: "Preparing", required: fromIntent)
-            engine.archiveURL = try history.begin(id: sessionID, meeting: kind == .meeting)
-            try await engine.prepare()
-            guard operationID == operation, phase == .preparing else { return }
-            if kind == .dictation, keepKeyboardReady, !isKeyboardSessionActive, engine.requiresMicrophoneAuthorization {
-                try MicrophoneCapture.shared.beginSession()
-                isKeyboardSessionActive = true
-            }
-            try await engine.start()
-            guard operationID == operation, phase == .preparing else { return }
-            phase = .listening
-            let startedAt = Date()
-            recordingStartedAt = startedAt
-            await recordingActivity.update(phase: kind == .meeting ? "Recording meeting" : "Recording")
-            guard operationID == operation, phase == .listening else { return }
-            statusMessage = kind == .meeting ? "Recording meeting — audio stays on this iPhone. Stop when finished." : "Listening — leave this recording active when switching apps"
-            publishSnapshot()
-        } catch {
-            guard operationID == operation else { return }
-            fail(with: error)
-        }
-    }
-
-    func stopRecording(shouldAutoInsert: Bool = false) async {
-        guard phase == .listening else { return }
-        let operation = operationID
-        phase = .finalizing
-        if isKeyboardSessionActive { await recordingActivity.update(phase: "Finishing · microphone active") }
-        else { await recordingActivity.update(phase: "Finishing") }
-        statusMessage = "Finalizing transcript…"
-        publishSnapshot()
-
-        do {
-            try await engine?.stop()
-            await updateTask?.value
-            guard phase != .failed, operationID == operation else { return }
-            if recordingKind == .meeting {
-                try history.completeMeeting(id: sessionID)
-                history.activeID = nil
-                recordingStartedAt = nil
-                engine = nil
-                updateTask = nil
-                phase = .ready
-                statusMessage = "Meeting saved — transcribe it in History"
-                await recordingActivity.finish()
-                publishSnapshot()
-                return
-            }
-            let vocabulary = try CustomVocabulary(customWordsEnabled ? customWordsText : "")
-            let rawText = vocabulary.apply(to: accumulator.finalizedText)
-            let processingMessage = "Applying final text preferences on device…"
-            appliedCleanup = selectedPostProcessorID
-            statusMessage = processingMessage
-
-            do {
-                processedText = try await TranscriptPostProcessor.process(
-                    rawText,
-                    using: selectedPostProcessorID,
-                    customInstructions: customCleanupInstructions,
-                    preferredWords: vocabulary.preferredWords
-                )
-            } catch {
-                if selectedPostProcessorID.usesLanguageModel {
-                    processedText = RuleBasedCleaner.clean(rawText)
-                    appliedCleanup = .rules
-                    statusMessage = "Used basic cleanup: \(error.localizedDescription)"
-                } else {
-                    throw error
-                }
-            }
-
-            guard phase != .failed, operationID == operation else { return }
-            // Apply once, after optional cleanup, so replacement chains cannot cascade.
-            // Vocabulary was applied before cleanup; never cascade corrections.
-
-            saveHistory(status: "Ready")
-            history.activeID = nil
-            recordingStartedAt = nil
-            if statusMessage == processingMessage {
-                statusMessage = processedText.isEmpty ? "No speech detected" : "Ready to insert"
-            }
-            if isKeyboardSessionActive {
-                keyboardSessionExpiresAt = KeyboardReadiness.deadline(after: Date())
-                statusMessage += " · Ready for 2 minutes"
-                await recordingActivity.update(phase: "Ready · microphone active")
-            }
-            if !isKeyboardSessionActive { await recordingActivity.finish() }
-            engine = nil
-            updateTask?.cancel()
-            updateTask = nil
-            phase = .ready
-            publishSnapshot(shouldAutoInsert: shouldAutoInsert)
-        } catch {
-            guard operationID == operation else { return }
-            fail(with: error)
-        }
-    }
-
-    func clear() {
-        guard phase != .preparing, phase != .finalizing else { return }
-        if phase == .listening {
-            guard recordingKind == .dictation else { return }
-            Task { await resetListeningTranscript() }
-            return
-        }
-        pendingAutoInsert = false
-        sessionID = UUID()
-        revision = 0
-        accumulator.reset()
-        originalText = ""; latestPartial = ""
-        processedText = ""
-        if phase == .listening {
-            statusMessage = "Listening — transcript cleared"
-        } else {
-            phase = .idle
-            statusMessage = isKeyboardSessionActive ? "Ready to dictate · microphone active" : "Ready"
-        }
-        publishSnapshot()
-    }
-
-    func restartTranscript() {
-        guard phase == .listening, recordingKind == .dictation else { return }
-        Task { await resetListeningTranscript() }
-    }
-
-    private func resetListeningTranscript() async {
-        guard phase == .listening, !resettingTranscript else { return }
-        resettingTranscript = true
-        phase = .preparing; statusMessage = "Resetting transcript and current audio…"; publishSnapshot()
-        defer { resettingTranscript = false }
-        do { try await engine?.discardCurrentAudio() }
-        catch { fail(with: error); return }
-        guard phase != .failed else { return }
-        pendingAutoInsert = false
-        sessionID = UUID()
-        revision = 0
-        accumulator.reset()
-        originalText = ""; latestPartial = ""
-        processedText = ""
-        phase = .listening
-        statusMessage = "Listening — started a new transcript"
-        saveHistory(status: "Recording — restarted")
-        publishSnapshot()
-    }
-
-    func endKeyboardSession(message: String = "Session ended — open Saywick to activate again") async {
-        guard !endingSession else { return }
-        endingSession = true
-        defer { endingSession = false }
-        keyboardSessionExpiresAt = nil
-        isKeyboardSessionActive = false
-        MicrophoneCapture.shared.endSession()
-        if phase == .listening { await stopRecording() }
-        else if phase == .preparing {
-            fail(with: SpeechEngineError.unavailable(message))
-        }
-        await recordingActivity.finish()
-        if phase != .finalizing && phase != .failed { statusMessage = message }
-        publishSnapshot()
-    }
-
+    func restoreOutput(_ text: String) { guard !history.isWorking else { return }; recorder.restore(text); selectedTab = 0 }
     func copyResult() {
-        let value = processedText.isEmpty ? finalizedTranscript : processedText
-        guard !value.isEmpty else { return }
-        UIPasteboard.general.string = value
-        statusMessage = "Copied"
+        let text = processedText.isEmpty ? finalizedTranscript : processedText
+        if !text.isEmpty { UIPasteboard.general.string = text }
     }
-
     func openKeyboardSettings() {
-        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-        UIApplication.shared.open(url)
+        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
     }
-
+    func startServices() async {
+        guard servicesEnabled else { return }
+        if startupTask == nil { startupTask = Task { await RecordingActivity().removeOrphanedActivities() } }
+        await startupTask?.value
+        if commandTask == nil { commandTask = Task { await monitorKeyboardCommands() } }
+        if observers.isEmpty { installAudioObservers() }
+    }
+    func prepareBackgroundDictation() async {
+        guard !isBusy, !history.isWorking, !isKeyboardSessionActive else { return }
+        let task = Task {
+            do {
+                guard await DictationController.Dependencies().authorize() else { throw SpeechEngineError.microphoneDenied }
+                setupMessage = "Downloading and verifying Parakeet for background dictation…"
+                _ = try await ParakeetModelStore.shared.modelURL()
+                setupMessage = "Setup complete. Use Start dictation in Shortcuts."
+            } catch { DiagnosticLog.error("model.setup", error); setupMessage = error.localizedDescription }
+        }
+        setupTask = task; await task.value; setupTask = nil
+    }
+    func startFromShortcut() async throws {
+        await startServices()
+        guard !isBusy, !history.isWorking else { throw SpeechEngineError.unavailable("A recording or transcription is already in progress.") }
+        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
+            throw SpeechEngineError.unavailable("Open Saywick and allow microphone access before using background recording.")
+        }
+        await startRecording(fromIntent: true)
+        guard recorder.canStop else { throw SpeechEngineError.unavailable(statusMessage) }
+    }
+    func stopFromShortcut() async throws {
+        await startServices()
+        guard canStop || isKeyboardSessionActive else { throw SpeechEngineError.unavailable("No active recording.") }
+        await recorder.end()
+        if let issue = recorder.session.issue { throw SpeechEngineError.unavailable(issue) }
+    }
+    func monitorKeyboardCommands() async {
+        while !Task.isCancelled {
+            do { await recorder.checkCapture(presence: try sharedStore?.readKeyboardPresence()) }
+            catch { DiagnosticLog.error("bridge.read-presence", error); await recorder.checkCapture(presence: nil) }
+            do {
+                if let command = try sharedStore?.readCommand(), acknowledgment?.id != command.id { Task { await receive(command) } }
+            } catch { DiagnosticLog.error("bridge.read-command", error) }
+            if UIApplication.shared.applicationState == .active, let action = ShortcutRequests.consume(from: defaults) {
+                if action == .start { Task { await startRecording() } } else { selectedTab = 1 }
+            }
+            if recorder.session.ownsMicrophone || recorder.isBusy { publishSnapshot() }
+            try? await Task.sleep(for: .milliseconds(recorder.session.ownsMicrophone || recorder.isBusy ? 250 : 1000))
+        }
+    }
+    func receive(_ command: VoiceCommand) async {
+        if let previous = acknowledgments[command.id] {
+            if acknowledgment != previous { acknowledgment = previous; publishSnapshot() }
+            return
+        }
+        let rejection: String?
+        if abs(Date().timeIntervalSince(command.issuedAt)) >= 10 { rejection = "Command expired. Try again." }
+        else if command.sessionID != nil && command.sessionID != recorder.sessionID { rejection = "Recording changed. Try again." }
+        else {
+            switch command.kind {
+            case .start: rejection = recorder.session.state == .activated && !isBusy ? nil : "Microphone is not ready."
+            case .stop, .stopAndInsert: rejection = canStop ? nil : "No recording to stop."
+            case .cancel, .restart: rejection = canStop ? nil : "No dictation to cancel."
+            case .clear: rejection = !isBusy ? nil : "Stop or cancel the recording first."
+            case .endSession: rejection = recorder.session.ownsMicrophone ? nil : "Microphone is already off."
+            }
+        }
+        let ack = CommandAcknowledgment(id: command.id, rejection: rejection)
+        acknowledgments[command.id] = ack; acknowledgment = ack
+        if acknowledgments.count > 128 { acknowledgments = [command.id: ack] }
+        publishSnapshot()
+        guard rejection == nil else { return }
+        // Awaited by this command task: only one accepted keyboard command executes at a time.
+        // Independent audio observers can still invalidate the recording during any suspension.
+        switch command.kind {
+        case .start: await startRecording()
+        case .stop: await recorder.stop()
+        case .stopAndInsert: await recorder.stop(insert: true)
+        case .cancel: await recorder.cancel()
+        case .restart: await recorder.cancel(restart: true)
+        case .clear: recorder.clear()
+        case .endSession: await recorder.end()
+        }
+    }
+    private func publishSnapshot() {
+        revision += 1
+        var snapshot = SharedSessionSnapshot(sessionID: recorder.sessionID, revision: revision, phase: phase,
+            engineID: selectedEngineID, finalizedText: finalizedTranscript,
+            partialText: recorder.accumulator.partialText, processedText: processedText, message: statusMessage,
+            shouldAutoInsert: recorder.shouldAutoInsert, updatedAt: Date(),
+            keyboardSessionExpiresAt: keyboardSessionExpiresAt, keyboardSessionActive: isKeyboardSessionActive,
+            isMeeting: false)
+        snapshot.dictation = recorder.session; snapshot.acknowledgment = acknowledgment
+        snapshot.cleanupConfigured = (recorder.canStop ? recorder.options.processor : selectedPostProcessorID) != .none
+        do { try sharedStore?.write(snapshot: snapshot) }
+        catch { DiagnosticLog.error("bridge.publish", error); bridgeMessage = error.localizedDescription }
+    }
+    private func installAudioObservers() {
+        let names: [Notification.Name] = [AVAudioSession.interruptionNotification, AVAudioSession.routeChangeNotification,
+            .AVAudioEngineConfigurationChange, AVAudioSession.mediaServicesWereLostNotification, AVAudioSession.mediaServicesWereResetNotification]
+        for name in names {
+            observers.append(Task { [weak self] in
+                for await notification in NotificationCenter.default.notifications(named: name) {
+                    guard !Task.isCancelled, let self else { return }
+                    let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+                    let routeReason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
+                    await self.audioEvent(name, interruption: raw, routeReason: routeReason)
+                }
+            })
+        }
+    }
+    func audioEvent(_ name: Notification.Name, interruption: UInt? = nil, routeReason: UInt? = nil) async {
+        let capture = MicrophoneCapture.shared
+        let audio = AVAudioSession.sharedInstance()
+        let ports = audio.currentRoute.inputs.map { $0.portType.rawValue }.joined(separator: ",")
+        ActivationDiagnostics.shared.record("Audio event \(name.rawValue); running \(capture.isRunning); rate \(audio.sampleRate); channels \(audio.inputNumberOfChannels); ports \(ports)")
+        if name == AVAudioSession.interruptionNotification {
+            guard interruption == AVAudioSession.InterruptionType.began.rawValue else { return }
+        } else if name == AVAudioSession.routeChangeNotification {
+            ActivationDiagnostics.shared.record("Audio route reason \(routeReason ?? 0)")
+            guard recorder.session.ownsMicrophone, !capture.isRunning else { return }
+        } else if name == .AVAudioEngineConfigurationChange {
+            guard recorder.session.ownsMicrophone, !capture.isRunning else { return }
+        }
+        if name == AVAudioSession.mediaServicesWereResetNotification { capture.resetAfterMediaServicesReset() }
+        await recorder.interrupt(message: "Audio interrupted — check History and activate Saywick again")
+    }
+    func shutdown() async {
+        commandTask?.cancel(); commandTask = nil
+        observers.forEach { $0.cancel() }; observers = []
+        setupTask?.cancel(); await recorder.shutdown()
+    }
     func handleOpenURL(_ url: URL) async {
         guard url.scheme == "localvoicekeyboard" || url.scheme == "saywick" else { return }
         await startServices()
@@ -404,7 +274,19 @@ final class AppModel {
         case "liveActivity": ActivationDiagnostics.shared.record("Recorder URL received from Live Activity link")
         default: ActivationDiagnostics.shared.record("Saywick URL received (source unspecified)")
         }
-        if url.host == "start" {
+        if url.host == "fix-word" {
+            selectedTab = 0
+            do {
+                let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "id" }?.value
+                guard let context = try sharedStore?.readCorrectionContext(), context.id.uuidString == id else {
+                    correctionError = "This correction link is no longer current. Tap Fix a word after the latest insertion."
+                    return
+                }
+                do { try sharedStore?.removeCorrectionContext() }
+                catch { DiagnosticLog.error("correction.cleanup", error) }
+                correctionContext = context
+            } catch { correctionError = error.localizedDescription }
+        } else if url.host == "start" {
             selectedTab = 0
             await startRecording()
         } else if url.host == "history" {
@@ -414,253 +296,9 @@ final class AppModel {
         }
     }
 
-    func removeOrphanedRecordingActivities() async {
-        await recordingActivity.removeOrphanedActivities()
+    func addCorrection(heard: String, preferred: String, transcript: String? = nil) throws {
+        customWordsText = try CustomVocabulary.addingCorrection(to: customWordsText, heard: heard, preferred: preferred, transcript: transcript)
+        customWordsEnabled = true
     }
 
-    func monitorKeyboardCommands() async {
-        while !Task.isCancelled {
-            if !isKeyboardSessionActive, isBusy, Date().timeIntervalSince(lastHeartbeat) >= 1 {
-                lastHeartbeat = Date()
-                publishSnapshot()
-            }
-            if isKeyboardSessionActive {
-                if KeyboardReadiness.hasExpired(deadline: keyboardSessionExpiresAt, at: Date()) {
-                    await endKeyboardSession(message: "Microphone off after 2 minutes idle — activate again in Saywick")
-                } else if !MicrophoneCapture.shared.isRunning {
-                    await endKeyboardSession(message: "Microphone interrupted — activate again in Saywick")
-                } else if Date().timeIntervalSince(lastHeartbeat) >= 1 {
-                    lastHeartbeat = Date()
-                    publishSnapshot()
-                }
-            }
-            if recordingKind == .meeting, phase == .listening {
-                if engine?.requiresMicrophoneAuthorization == true, !MicrophoneCapture.shared.isRunning {
-                    await endKeyboardSession(message: "Meeting interrupted — check the saved audio in History")
-                } else if let recordingStartedAt, Date().timeIntervalSince(recordingStartedAt) >= RecordingLimits.maximumDuration {
-                    await endKeyboardSession(message: "Meeting reached 4 hours — audio saved in History")
-                } else if Date().timeIntervalSince(lastHeartbeat) >= 1 {
-                    lastHeartbeat = Date()
-                    publishSnapshot()
-                }
-            }
-            if UIApplication.shared.applicationState == .active,
-               let action = ShortcutRequests.consume(from: defaults) {
-                switch action {
-                case .start:
-                    selectedTab = 0
-                    Task { await startRecording() }
-                case .history:
-                    selectedTab = 1
-                }
-            }
-            if let command = try? sharedStore?.readCommand(),
-               command.id != lastCommandID {
-                lastCommandID = command.id
-                guard abs(Date().timeIntervalSince(command.issuedAt)) < 10,
-                      command.sessionID == nil || command.sessionID == sessionID else { continue }
-                switch command.kind {
-                case .start:
-                    if isKeyboardSessionActive, phase == .idle || phase == .ready {
-                        Task { await startRecording() }
-                    }
-                case .endSession:
-                    await endKeyboardSession()
-                case .stop:
-                    Task { await stopRecording() }
-                case .stopAndInsert:
-                    Task { await stopRecording(shouldAutoInsert: true) }
-                case .restart:
-                    restartTranscript()
-                case .clear:
-                    clear()
-                }
-            }
-
-            if recordingKind == .dictation, !isKeyboardSessionActive, phase == .listening,
-               keyboardLifecycle?.shouldStop(
-                presence: try? sharedStore?.readKeyboardPresence(), now: Date()) == true {
-                await stopRecording()
-                if phase == .ready, appliedCleanup == selectedPostProcessorID {
-                    statusMessage = "Keyboard dismissed; transcript saved in History"
-                    publishSnapshot()
-                }
-            }
-
-            try? await Task.sleep(for: .milliseconds(200))
-        }
-    }
-
-    private func handle(_ update: SpeechEngineUpdate) {
-        guard phase == .preparing || phase == .listening || phase == .finalizing else { return }
-        if resettingTranscript {
-            if case .failure(let message) = update { fail(with: SpeechEngineError.unavailable(message)) }
-            return
-        }
-        switch update {
-        case .preparing(let message, let progress):
-            statusMessage = message
-            preparationProgress = progress
-        case .final(let text, let latency, let receivedAt):
-            originalText += (originalText.isEmpty ? "" : " ") + text
-            latestPartial = ""
-            saveHistory(status: "Recording — recovery checkpoint")
-            let spokenCommand = SpokenVoiceCommandParser.match(in: text)
-            if isHandlingSpokenCommand, spokenCommand != nil {
-                // Some engines flush their most recent final again when stop()
-                // is called. Never append the command words on that callback.
-                return
-            }
-            if phase == .listening, let command = spokenCommand {
-                isHandlingSpokenCommand = true
-
-                // Consuming an empty final also clears the command words from
-                // the accumulator's last partial transcription.
-                if command.command == .stopAndInsert {
-                    accumulator.consume(
-                        .final(
-                            text: command.transcriptBeforeCommand,
-                            endOfUtteranceLatencyMilliseconds: latency,
-                            receivedAt: receivedAt
-                        )
-                    )
-                }
-                publishSnapshot()
-
-                Task { [weak self] in
-                    await self?.performSpokenCommand(command.command)
-                }
-                return
-            }
-            accumulator.consume(update)
-        case .partial(let text, _):
-            latestPartial = text
-            accumulator.consume(update)
-        case .failure(let message):
-            fail(with: SpeechEngineError.unavailable(message))
-            return
-        }
-        publishSnapshot()
-    }
-
-    private func performSpokenCommand(_ command: VoiceCommandKind) async {
-        defer { isHandlingSpokenCommand = false }
-        switch command {
-        case .start, .endSession:
-            break // These actions are available only through explicit UI controls.
-        case .stop:
-            await stopRecording()
-        case .stopAndInsert:
-            await stopRecording(shouldAutoInsert: true)
-        case .restart:
-            // Keep the active audio session alive so this also works while the
-            // containing app is in the background; reset its transcript state.
-            restartTranscript()
-        case .clear:
-            clear()
-        }
-    }
-
-    private func fail(with error: Error) {
-        let failure = error as NSError
-        ActivationDiagnostics.shared.record("Recording failed: \(failure.domain)/\(failure.code)")
-        operationID = UUID()
-        keyboardSessionExpiresAt = nil
-        isKeyboardSessionActive = false
-        pendingAutoInsert = false
-        MicrophoneCapture.shared.endSession()
-        phase = .failed
-        statusMessage = error.localizedDescription
-        saveHistory(status: "Interrupted or failed", error: error.localizedDescription)
-        history.activeID = nil
-        recordingStartedAt = nil
-        Task { await recordingActivity.finish() }
-        publishSnapshot()
-        let failedEngine = engine
-        failureCleanup = true
-        updateTask?.cancel()
-        updateTask = nil
-        engine = nil
-        Task {
-            try? await failedEngine?.stop()
-            failureCleanup = false
-        }
-    }
-
-    private func publishSnapshot(shouldAutoInsert: Bool? = nil) {
-        if let shouldAutoInsert { pendingAutoInsert = shouldAutoInsert }
-        revision += 1
-        let snapshot = SharedSessionSnapshot(
-            sessionID: sessionID,
-            revision: revision,
-            phase: phase,
-            engineID: selectedEngineID,
-            finalizedText: accumulator.finalizedText,
-            partialText: accumulator.partialText,
-            processedText: processedText,
-            message: statusMessage,
-            shouldAutoInsert: pendingAutoInsert,
-            updatedAt: Date(),
-            keyboardSessionExpiresAt: keyboardSessionExpiresAt,
-            keyboardSessionActive: isKeyboardSessionActive,
-            isMeeting: recordingKind == .meeting
-        )
-
-        do {
-            try sharedStore?.write(snapshot: snapshot)
-        } catch {
-            bridgeMessage = error.localizedDescription
-        }
-    }
-
-    private func microphoneIsAuthorized() async -> Bool {
-        switch AVCaptureDevice.authorizationStatus(for: .audio) {
-        case .authorized:
-            true
-        case .notDetermined:
-            await AVCaptureDevice.requestAccess(for: .audio)
-        default:
-            false
-        }
-    }
-
-    private func saveHistory(status: String, error: String? = nil) {
-        guard let id = history.activeID else { return }
-        guard recordingKind == .dictation else {
-            try? history.completeMeeting(id: id, status: status)
-            return
-        }
-        let raw = [originalText, latestPartial].filter { !$0.isEmpty }.joined(separator: " ")
-        history.checkpoint(id: id, run: TranscriptRun(engine: selectedEngineID, rawText: raw,
-            finalText: processedText, cleanup: appliedCleanup ?? selectedPostProcessorID,
-            cleanupInstructions: customCleanupInstructions,
-            vocabulary: customWordsEnabled ? customWordsText : "",
-            elapsedSeconds: recordingStartedAt.map { Date().timeIntervalSince($0) } ?? 0,
-            error: error), status: status)
-    }
-
-    func restoreOutput(_ text: String) {
-        guard !isBusy, !history.isWorking else { return }
-        pendingAutoInsert = false
-        sessionID = UUID(); accumulator.reset(); processedText = text
-        phase = .ready; statusMessage = "Restored from History — ready to insert"
-        selectedTab = 0; publishSnapshot()
-    }
-
-    func addCorrection(heard: String, preferred: String) throws {
-        let line = heard.trimmingCharacters(in: .whitespacesAndNewlines) + " = " + preferred.trimmingCharacters(in: .whitespacesAndNewlines)
-        let updated = customWordsText.isEmpty ? line : customWordsText + "\n" + line
-        _ = try CustomVocabulary(updated)
-        customWordsText = updated; customWordsEnabled = true
-    }
-
-    func watchInterruptions() async {
-        for await notification in NotificationCenter.default.notifications(named: AVAudioSession.interruptionNotification) {
-            guard let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
-                  AVAudioSession.InterruptionType(rawValue: raw) == .began else { continue }
-            if isKeyboardSessionActive || phase == .listening || phase == .preparing {
-                await endKeyboardSession(message: "Audio interrupted — check History and activate Saywick again")
-            }
-        }
-    }
 }

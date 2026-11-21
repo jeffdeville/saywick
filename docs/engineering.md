@@ -18,31 +18,31 @@ clny_guidance:
 
 ## Component map
 
-This charter was established against a local release-candidate working tree. Candidate observations below can differ from the implementation on the default branch. Observed practices have unexamined standing unless an existing decision says otherwise.
+This inventory describes the working tree, including unpublished release materials. Observed practices have unexamined standing unless an existing decision says otherwise.
 
 | Area | What it serves | Evidence and reading route |
 | --- | --- | --- |
-| Sources/App, including Engines, PostProcessing, Views and Resources | Dictation, model setup, transcript cleanup and retained history. | [App model](../Sources/App/AppModel.swift), [user workflows and retention](../README.md), [native runtime](parakeet-ios.md) |
-| Sources/KeyboardExtension, Shared, StatusWidget | Users type or dictate in another app, see recording status, and stop recording | [Keyboard session](keyboard-session.md), [shared store](../Sources/Shared/SharedContainerStore.swift), [activation diagnostics](activation-diagnostics.md) |
+| Sources/App, including Engines, PostProcessing, Views and Resources | Dictation, model setup, transcript cleanup and retained history. | [App model](../Sources/App/AppModel.swift), [dictation controller](../Sources/App/DictationController.swift), [user workflows and retention](../README.md), [native runtime](parakeet-ios.md) |
+| Sources/KeyboardExtension, Shared, StatusWidget | Users type or dictate in another app, see recording status, stop recording | [Keyboard session](keyboard-session.md), [shared store](../Sources/Shared/SharedContainerStore.swift), [activation diagnostics](activation-diagnostics.md) |
 | Sources/VoiceKeyboardCore, Tools/Parakeet, Tools/PauseBench | Shared dictation logic and developer evaluation of transcription quality. Historical provider helpers also serve the benchmark executables | [Package targets](../Package.swift), [pause benchmark](pause-benchmark.md), [natural transcription comparison](natural-transcription-comparison.md). HandyRunner's Cargo.lock pins benchmark dependencies |
 | Config, project.yml, LocalVoiceKeyboard.xcodeproj, Makefile | Configure, generate and build app and extension targets | [Build and install](../README.md#build-and-install), [target definitions](../project.yml), [build commands](../Makefile). Xcode project files are generated |
-| Tests, Tools/Coverage, Tools/Diagnostics | Core smoke and unit checks, app and UI checks, device diagnostics and coverage | [Device checks](device-testing.md), [crash workflow](crash-report-workflow.md) |
-| Tools/Release, Release/ExportOptions.plist, LICENSE | Prepare and verify the distributable product and its notices | [Release checklist](app-store-release.md), [license](../LICENSE), [runtime notices](../Sources/App/Resources/Parakeet-Licenses.txt) |
-| Release/metadata, Release/site, Design/AppIcon and app icon asset | Explain Saywick to prospective users, publish privacy and support information, and supply product artwork | [Release material status](../Release/README.md), [listing draft](../Release/metadata/en-US.json), [icon guide](app-icon.md). Listing and site serve public information and support. The icon also ships in the iOS product |
-| docs | Contributor procedures, experiments, comparisons, roadmap and dated verification records | [Device procedure](device-testing.md), [roadmap](roadmap.md). Dated reports describe their respective runs |
+| Tests, Tools/Coverage, Tools/Diagnostics | Core smoke and unit checks, app and UI checks, device diagnostics and coverage | [Device checks](device-testing.md), [crash workflow](crash-report-workflow.md), [coverage procedure](../Tools/Coverage/run.sh) |
+| Tools/Release, Release/ExportOptions.plist, LICENSE | Prepare and verify the distributable product and its notices | [Release checklist](app-store-release.md), [archive verifier](../Tools/Release/verify_archive.py), [license](../LICENSE), [runtime notices](../Sources/App/Resources/Parakeet-Licenses.txt) |
+| Release/metadata, Release/site, Design/AppIcon and app icon asset | Explain Saywick to prospective users, publish privacy and support information, and supply product artwork | [Release material status](../Release/README.md), [listing draft](../Release/metadata/en-US.json), [artwork selection](../Design/AppIcon/README.md). Listing and site serve public information and support. The icon also ships in the iOS product |
+| docs | Contributor procedures, experiments, comparisons, roadmap and dated verification records | [Device procedure](device-testing.md), [roadmap](roadmap.md), [compatibility observations](ios-27-compatibility-2026-09-12.md). Dated reports describe their respective runs |
 | Local workspace directories | Developer-only build output, package state, diagnostics, editor history and indexing | [.gitignore](../.gitignore) covers .build, .swiftpm, .local-diagnostics, .history, .serena and Finder metadata. Git metadata and generated dependency trees are outside the product inventory |
 
 ## Further evidence
 
-The [research notes](research.md), [workflow comparison](spokenly-comparison.md), and [icon guide](app-icon.md) cover investigation and design history.
+Use the [keyboard refactor proposal](keyboard-state-refactor.md), [refactor verification](refactor-verification.md), [layout verification](listening-layout-verification.md), [code quality audit](code-quality-audit-2026-09-11.md), and [September crash investigation](crash-fix-2026-09-10.md) for historical engineering context. The [research notes](research.md), [workflow comparison](spokenly-comparison.md), and [icon guide](app-icon.md) cover investigation and design history.
 
 ## Product promises
 
 Fresh installs default to Faithful cleanup. Every upgrade must preserve the user’s saved cleanup choice, including Off. The owner confirmed both requirements on November 20, 2026.
 
-Saywick must always transcribe audio on device. Cloud cleanup requires an explicit user selection, including when a local processor is unavailable. Selecting OpenAI cleanup authorizes subsequent cleanup requests using the user’s API key, which may incur charges. Authorization ends when the user turns cleanup off or selects another mode. No per-request confirmation is required. The local release candidate includes an OpenAI cleanup mode. The [privacy and retention guide](../README.md#privacy-and-retention) describes the text sent with that selection.
+Saywick must always transcribe audio on device. Cloud cleanup requires an explicit user selection, including when a local processor is unavailable. Selecting OpenAI cleanup authorizes subsequent cleanup requests using the user’s API key, which may incur charges. Authorization ends when the user turns cleanup off or selects another mode. No per-request confirmation is required. The [cleanup dispatcher](../Sources/App/PostProcessing/TranscriptPostProcessor.swift) calls OpenAI only for the OpenAI processor selection. The [privacy and retention guide](../README.md#privacy-and-retention) describes the text sent with that selection.
 
-Speaker identification and meeting summaries are outside the current product scope. The owner is interested in researching both and has deferred implementation. Revisit if research leads the owner to prioritize either feature. The release candidate retains legacy recordings. Restoring dedicated meeting recording is deferred until the owner revisits it. Existing imported history is subject to the same retention policy as other recordings.
+Speaker identification and meeting summaries are outside the current product scope. The owner is interested in researching both and has deferred implementation. Revisit if research leads the owner to prioritize either feature. The release candidate retains legacy recordings. Restoring dedicated meeting recording is deferred until the owner revisits it. New audio imports are outside the product scope. History continues to open recordings saved by earlier versions, including imported audio. Existing imported history is subject to the same retention policy as other recordings.
 
 ## Product change authority
 
@@ -60,8 +60,8 @@ Once a month, review [Handy releases](https://github.com/cjpais/Handy/releases),
 
 ## Open findings
 
-- The local release candidate’s app settings initializer implements the fresh-install default. Its one-time migration can still replace a saved Off choice with Faithful when the earlier opt-out migration flag is set. Preserving Off on this upgrade path is an outstanding implementation gap.
+- The [app settings initializer](../Sources/App/AppModel.swift) implements the fresh-install default. Its one-time migration can still replace a saved Off choice with Faithful when the earlier opt-out migration flag is set. Preserving Off on this upgrade path is an outstanding implementation gap.
 - Optional OpenAI cleanup uses the user's key and sends transcript content and relevant vocabulary to the provider. The privacy draft describes that transfer. Recordings excluded from backup can be permanently lost through expiry or deletion.
 - The [device checklist](device-testing.md) includes checks for four transcription engines and Microsoft comparisons from an earlier product version. Its physical-device checks for microphone capture and background operation remain relevant.
-- The local build 1.0 (5) candidate removed dedicated meeting recording entry points. The default branch still includes an earlier implementation.
+- The [build 1.0 (5) release record](app-store-release.md) and [root README](../README.md#background-activation-and-meetings) describe removal of dedicated meeting recording entry points. The [UI regression test](../Tests/LocalVoiceKeyboardUITests/LocalVoiceKeyboardUITests.swift) explicitly expects the meeting button to be absent.
 - The release README identifies the listing and site as drafts and calls for a real support contact before publication. Publication status has not been independently verified.

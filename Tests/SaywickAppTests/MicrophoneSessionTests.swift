@@ -5,6 +5,26 @@ import VoiceKeyboardCore
 
 @MainActor
 final class MicrophoneSessionTests: XCTestCase {
+    func testErrorCueDecodesAsShortAudibleAudio() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".wav")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try RecordingErrorSound.tone().write(to: url)
+        let file = try AVAudioFile(forReading: url)
+        XCTAssertEqual(file.processingFormat.channelCount, 1)
+        XCTAssertEqual(Double(file.length) / file.processingFormat.sampleRate, 0.75, accuracy: 0.001)
+        let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                                 frameCapacity: AVAudioFrameCount(file.length)))
+        try file.read(into: buffer)
+        let samples = try XCTUnwrap(buffer.floatChannelData)[0]
+        let peak = (0..<Int(buffer.frameLength)).map { abs(samples[$0]) }.max() ?? 0
+        XCTAssertGreaterThan(peak, 0.4)
+        XCTAssertLessThan(peak, 0.6)
+        // The gap separates the two notes and the endpoints fade to silence.
+        XCTAssertEqual(samples[0], 0)
+        XCTAssertEqual(samples[Int(0.36 * file.processingFormat.sampleRate)], 0)
+        XCTAssertEqual(samples[Int(buffer.frameLength) - 1], 0)
+    }
+
     func testIdleAudioIsDiscardedAndNextDictationGetsOnlyNewSamples() async throws {
         let delivery = MicrophoneDelivery()
         let first = AsyncStream.makeStream(of: OwnedAudioBuffer.self)

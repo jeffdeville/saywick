@@ -18,6 +18,14 @@ final class KeyboardHandoffDeviceTests: XCTestCase {
         }
         search.tap()
         let open = settings.buttons["openSaywick"]
+        if !open.waitForExistence(timeout: 2) {
+            let globe = settings.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Next keyboard' OR label CONTAINS[c] 'Switch keyboard' OR label == 'globe'")).firstMatch
+            if globe.exists {
+                globe.press(forDuration: 1)
+                let saywick = settings.descendants(matching: .any).matching(NSPredicate(format: "label == 'Saywick'")).firstMatch
+                if saywick.waitForExistence(timeout: 2) { saywick.tap() }
+            }
+        }
         guard open.waitForExistence(timeout: 5) else {
             XCTFail("Saywick is not the active keyboard in Settings")
             return
@@ -28,7 +36,7 @@ final class KeyboardHandoffDeviceTests: XCTestCase {
         defer { app.terminate() }
         open.tap()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
-        let stop = app.buttons["Stop and clean up"]
+        let stop = app.buttons["Stop dictation"]
         // Always release capture after checking the URL handoff.
         if app.buttons["End microphone session"].waitForExistence(timeout: 15) {
             app.buttons["End microphone session"].tap()

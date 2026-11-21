@@ -19,6 +19,7 @@ final class RecordingActivity {
             activity = try Activity.request(attributes: SaywickActivityAttributes(startedAt: Date(), engine: engine),
                 content: ActivityContent(state: .init(phase: phase), staleDate: nil))
         } catch {
+            DiagnosticLog.error("activity.start", error)
             if required { throw SpeechEngineError.unavailable("Could not start the recording indicator. Enable Live Activities for Saywick and try again. \(error.localizedDescription)") }
         }
     }

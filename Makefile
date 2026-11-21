@@ -53,3 +53,14 @@ pause-bench-test:
 
 pause-bench-fixtures:
 	python3 Tools/PauseBench/bench.py generate
+
+.PHONY: coverage
+coverage:
+	bash Tools/Coverage/run.sh
+
+.PHONY: diagnostics diagnostics-test
+diagnostics:
+	python3 Tools/Diagnostics/check.py
+
+diagnostics-test:
+	python3 -m unittest discover -s Tools/Diagnostics -p 'test_*.py'

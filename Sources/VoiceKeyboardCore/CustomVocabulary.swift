@@ -38,6 +38,39 @@ public struct CustomVocabulary: Sendable {
         entries = parsed.sorted { $0.heard.count > $1.heard.count }
     }
 
+    /// Build one explicit alias without allowing fields to inject vocabulary lines.
+    public static func addingCorrection(to source: String, heard: String, preferred: String, transcript: String? = nil) throws -> String {
+        let heard = heard.trimmingCharacters(in: .whitespacesAndNewlines)
+        let preferred = preferred.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !heard.isEmpty, !preferred.isEmpty,
+              !heard.contains("="), !preferred.contains("="),
+              !heard.contains(where: { $0.isNewline }), !preferred.contains(where: { $0.isNewline }) else {
+            throw CorrectionError.invalidFields
+        }
+        guard heard != preferred else { throw CorrectionError.unchanged }
+        if let transcript {
+            let pattern = "(?<![\\p{L}\\p{M}\\p{N}_])" + NSRegularExpression.escapedPattern(for: heard) + "(?![\\p{L}\\p{M}\\p{N}_])"
+            let regex = try NSRegularExpression(pattern: pattern, options: .caseInsensitive)
+            guard regex.firstMatch(in: transcript, range: NSRange(transcript.startIndex..., in: transcript)) != nil else {
+                throw CorrectionError.notInTranscript
+            }
+        }
+        let updated = source.isEmpty ? "\(heard) = \(preferred)" : source + "\n\(heard) = \(preferred)"
+        _ = try CustomVocabulary(updated)
+        return updated
+    }
+
+    public enum CorrectionError: LocalizedError {
+        case invalidFields, unchanged, notInTranscript
+        public var errorDescription: String? {
+            switch self {
+            case .invalidFields: "Enter one word or phrase in each field, without = or line breaks."
+            case .unchanged: "Enter the spelling you want instead."
+            case .notInTranscript: "The heard word or phrase must appear in the latest inserted transcript."
+            }
+        }
+    }
+
     public var preferredWords: [String] { Array(Set(entries.map(\.preferred))).sorted() }
 
     private func correctSimilarTerms(in source: String) -> String {

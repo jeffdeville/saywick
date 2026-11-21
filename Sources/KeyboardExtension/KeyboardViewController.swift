@@ -4,20 +4,23 @@ import VoiceKeyboardCore
 
 class KeyboardViewController: UIInputViewController {
     private let statusLabel = UILabel()
-    private let transcriptLabel = UILabel()
+    private let transcriptLabel = LiveTranscriptView()
     private let stopButton = UIButton(type: .system)
     private let insertButton = UIButton(type: .system)
     private let restartButton = UIButton(type: .system)
     private let clearButton = UIButton(type: .system)
     private let keyboardID = UUID()
     private var keyboardIsVisible = false
+    private var canInsertIntoHost = false
     private var lastVisibleAt: Date?
     private var lastPresenceWrite = Date.distantPast
     private var timer: Timer?
-    private var pendingAction: (command: VoiceCommandKind, date: Date)?
+    private var pendingAction: PendingKeyboardCommand?
+    private var lastAnnouncedIssue: String?
     private var lastRevision = -1
     private var currentSnapshot: SharedSessionSnapshot?
-    private var store: SharedContainerStore?
+    var store: SharedContainerStore?
+    private var insertedIDs: Set<UUID> = []
     private var insertedText: String?
     private var insertedContext: String?
     private var insertedDocument: UUID?
@@ -25,18 +28,28 @@ class KeyboardViewController: UIInputViewController {
     private var cursorOffset: CGFloat = 0
     private var uppercase = false
     private var symbols = false
+    private var alternateSymbols = false
+    private var sideConstraints: [NSLayoutConstraint] = []
     private let characterRows = UIStackView()
     private let voicePanel = UIStackView()
+    private let rootStack = UIStackView()
+    private let controlBar = UIStackView()
+    private var primaryWidth: NSLayoutConstraint?
+    private var showsTranscript = false
+    private var isListeningLayout = false
     private let typingPanel = UIStackView()
     private let morePanel = UIStackView()
     private var keyboardHeight: NSLayoutConstraint?
     private var launchController: UIHostingController<KeyboardAppLink>?
+    private var correctionController: UIHostingController<KeyboardCorrectionLink>?
     private var activationFailure: String?
 
-    private lazy var modeButton = makeButton(title: "ABC", action: #selector(toggleTypingMode))
-    private lazy var shiftButton = makeButton(title: "⇧", action: #selector(toggleShift))
-    private lazy var symbolsButton = makeButton(title: "123", action: #selector(toggleSymbols))
+    private lazy var cleanupButton = makeButton(title: "Polish", action: #selector(toggleCleanup))
+    private lazy var menuButton = makeButton(title: "More", action: #selector(showMore))
+    private lazy var shiftButton = makeTypingKey(title: "⇧", action: #selector(toggleShift), utility: true)
+    private lazy var symbolsButton = makeTypingKey(title: "123", action: #selector(toggleSymbols), utility: true)
     private lazy var endSessionButton = makeButton(title: "End", action: #selector(endSession))
+    private lazy var cancelButton = makeButton(title: "Cancel", action: #selector(cancelDictation))
     private lazy var undoButton = makeButton(title: "Undo insertion", action: #selector(undoInsertion))
 
     override func viewDidLoad() {
@@ -44,9 +57,10 @@ class KeyboardViewController: UIInputViewController {
         configureView()
 
         do {
-            if hasFullAccess { store = try SharedContainerStore() }
+            if hasFullAccess, store == nil { store = try SharedContainerStore() }
             refreshSnapshot()
         } catch {
+            DiagnosticLog.error("keyboard.refresh", error)
             statusLabel.text = error.localizedDescription
         }
     }
@@ -54,12 +68,9 @@ class KeyboardViewController: UIInputViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         keyboardIsVisible = true
-        typingPanel.isHidden = true
-        voicePanel.isHidden = false
-        modeButton.configuration?.title = "ABC"
-        symbolsButton.isHidden = true
+        symbols = false; alternateSymbols = false; uppercase = false
+        rebuildKeys()
         morePanel.isHidden = true
-        updateKeyboardHeight()
         publishPresence(visible: true, force: true)
         refreshSnapshot()
         timer?.invalidate()
@@ -73,9 +84,21 @@ class KeyboardViewController: UIInputViewController {
         RunLoop.main.add(timer!, forMode: .common)
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        canInsertIntoHost = true
+        refreshSnapshot()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        canInsertIntoHost = false
+        super.viewWillDisappear(animated)
+    }
+
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         keyboardIsVisible = false
+        isListeningLayout = false
         publishPresence(visible: false, force: true)
         timer?.invalidate()
         timer = nil
@@ -87,18 +110,27 @@ class KeyboardViewController: UIInputViewController {
         nextKeyboardButton.isHidden = !needsInputModeSwitchKey
     }
 
+    private func updateTranscript(_ text: String) {
+        guard transcriptLabel.text != text else { return }
+        transcriptLabel.text = text
+        transcriptLabel.scrollToEndOnLayout = true
+        transcriptLabel.setNeedsLayout()
+    }
+
     private lazy var nextKeyboardButton: UIButton = makeButton(
         title: "🌐",
         action: #selector(nextKeyboard)
     )
 
     private func configureView() {
-        view.backgroundColor = .clear
+        view.backgroundColor = UIColor { $0.userInterfaceStyle == .dark
+            ? UIColor(white: 0.12, alpha: 1) : UIColor(red: 0.87, green: 0.88, blue: 0.90, alpha: 1) }
         keyboardHeight = view.heightAnchor.constraint(equalToConstant: 250)
         keyboardHeight?.priority = .defaultHigh
         keyboardHeight?.isActive = true
 
         statusLabel.font = .preferredFont(forTextStyle: .caption1)
+        statusLabel.adjustsFontForContentSizeCategory = true
         statusLabel.textColor = .secondaryLabel
         statusLabel.numberOfLines = 2
         statusLabel.text = hasFullAccess
@@ -106,14 +138,28 @@ class KeyboardViewController: UIInputViewController {
             : "Typing is ready. Enable Full Access for local dictation."
 
         transcriptLabel.font = .preferredFont(forTextStyle: .body)
-        transcriptLabel.numberOfLines = 2
+        transcriptLabel.adjustsFontForContentSizeCategory = true
+        transcriptLabel.isEditable = false
+        transcriptLabel.isSelectable = true
+        transcriptLabel.backgroundColor = .clear
+        transcriptLabel.topEdgeEffect.isHidden = true
+        transcriptLabel.bottomEdgeEffect.isHidden = true
+        transcriptLabel.textContainerInset = .zero
+        transcriptLabel.textContainer.lineFragmentPadding = 0
+        transcriptLabel.accessibilityIdentifier = "keyboardTranscript"
+        transcriptLabel.accessibilityLabel = "Live transcript"
         transcriptLabel.setContentHuggingPriority(.defaultLow, for: .vertical)
         transcriptLabel.text = "No transcript yet"
 
         stopButton.configuration = .filled()
-        stopButton.configuration?.title = "Stop & Insert"
-        stopButton.configuration?.image = UIImage(systemName: "stop.circle")
+        stopButton.configuration?.title = nil
+        stopButton.configuration?.image = UIImage(systemName: "mic.fill")
+        stopButton.configuration?.preferredSymbolConfigurationForImage = .init(pointSize: 28, weight: .semibold)
+        stopButton.accessibilityIdentifier = "dictationAction"
+        stopButton.configuration?.cornerStyle = .capsule
         stopButton.configuration?.imagePadding = 6
+        stopButton.titleLabel?.numberOfLines = 1
+        stopButton.titleLabel?.adjustsFontSizeToFitWidth = true
         stopButton.addTarget(self, action: #selector(stopAndInsert), for: .touchUpInside)
 
         insertButton.configuration = .bordered()
@@ -132,19 +178,22 @@ class KeyboardViewController: UIInputViewController {
         clearButton.configuration?.imagePadding = 4
         clearButton.addTarget(self, action: #selector(clearTranscript), for: .touchUpInside)
 
-        let deleteButton = makeButton(title: "⌫", action: #selector(deleteBackward))
-        deleteButton.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(holdDelete(_:))))
-        let spaceButton = makeButton(title: "space", action: #selector(insertSpace))
-        spaceButton.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(moveCursor(_:))))
-        let returnButton = makeButton(title: "return", action: #selector(insertReturn))
-
-        let more = makeButton(title: "More", action: #selector(showMore))
-        let heading = UIStackView(arrangedSubviews: [modeButton, UIView(), more, endSessionButton])
+        for (button, symbol, label) in [(menuButton, "line.3.horizontal", "More"),
+                                         (undoButton, "arrow.uturn.backward", "Undo insertion")] {
+            button.configuration = .plain()
+            button.configuration?.image = UIImage(systemName: symbol)
+            button.configuration?.preferredSymbolConfigurationForImage = .init(pointSize: 23)
+            button.configuration?.baseForegroundColor = .label
+            button.accessibilityLabel = label
+            let width = button.widthAnchor.constraint(equalToConstant: 40)
+            width.priority = .init(999); width.isActive = true
+            button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        }
         endSessionButton.accessibilityLabel = "End microphone session"
-        endSessionButton.isHidden = true
-        heading.axis = .horizontal
-        heading.spacing = 8
-        heading.alignment = .center
+        nextKeyboardButton.configuration = .plain()
+        nextKeyboardButton.configuration?.image = UIImage(systemName: "globe")
+        nextKeyboardButton.configuration?.baseForegroundColor = .label
+        nextKeyboardButton.accessibilityLabel = "Next keyboard"
 
         let launch = UIHostingController(rootView: KeyboardAppLink { [weak self] in
             guard let self else { return }
@@ -156,60 +205,124 @@ class KeyboardViewController: UIInputViewController {
         launch.view.isHidden = true
         launch.didMove(toParent: self)
         launchController = launch
-        let voiceControls = UIStackView(arrangedSubviews: [stopButton, launch.view!, insertButton])
-        voiceControls.axis = .horizontal
-        voiceControls.distribution = .fillEqually
-        voiceControls.spacing = 8
+        [menuButton, undoButton, cancelButton, UIView(), cleanupButton, launch.view!, stopButton].forEach { controlBar.addArrangedSubview($0) }
+        controlBar.axis = .horizontal
+        controlBar.distribution = .fill
+        controlBar.alignment = .center
+        controlBar.spacing = 6
+        cancelButton.configuration?.title = nil
+        cancelButton.configuration?.image = UIImage(systemName: "xmark")
+        cancelButton.accessibilityLabel = "Cancel dictation"
+        cleanupButton.setContentHuggingPriority(.required, for: .horizontal)
+        primaryWidth = stopButton.widthAnchor.constraint(equalToConstant: 56)
+        let controlSizes = [
+            cancelButton.widthAnchor.constraint(equalToConstant: 44),
+            cancelButton.heightAnchor.constraint(equalToConstant: 44),
+            cleanupButton.heightAnchor.constraint(equalToConstant: 44),
+            primaryWidth!,
+            stopButton.heightAnchor.constraint(equalToConstant: 56),
+            launch.view.heightAnchor.constraint(equalToConstant: 56),
+            launch.view.widthAnchor.constraint(equalToConstant: 56),
+            insertButton.heightAnchor.constraint(equalToConstant: 44),
+        ]
+        for constraint in controlSizes {
+            constraint.priority = .init(999)
+            constraint.isActive = true
+        }
 
-        [restartButton, clearButton, undoButton].forEach { morePanel.addArrangedSubview($0) }
+        [endSessionButton, restartButton, clearButton].forEach { morePanel.addArrangedSubview($0) }
         morePanel.axis = .horizontal
         morePanel.distribution = .fillEqually
         morePanel.spacing = 6
         morePanel.isHidden = true
 
-        let typingControls = UIStackView(
-            arrangedSubviews: [nextKeyboardButton, symbolsButton, deleteButton, spaceButton, returnButton]
-        )
-        typingControls.axis = .horizontal
-        typingControls.distribution = .fillProportionally
-        typingControls.spacing = 8
-
         voicePanel.axis = .vertical
-        voicePanel.spacing = 8
-        [transcriptLabel, voiceControls].forEach { voicePanel.addArrangedSubview($0) }
-        voicePanel.isHidden = false
-        typingPanel.isHidden = true
-        symbolsButton.isHidden = true
+        voicePanel.addArrangedSubview(transcriptLabel)
+        let correction = UIHostingController(rootView: KeyboardCorrectionLink(context: nil, prepare: { _ in false }, rejected: {}))
+        addChild(correction)
+        correction.view.backgroundColor = .clear
+        correction.view.accessibilityIdentifier = "correctionRow"
+        correction.view.isHidden = true
+        correction.didMove(toParent: self)
+        correctionController = correction
+        let correctionHeight = correction.view.heightAnchor.constraint(equalToConstant: 30)
+        correctionHeight.priority = .init(999); correctionHeight.isActive = true
+        voicePanel.isHidden = true
+        typingPanel.isHidden = false
         typingPanel.axis = .vertical
         characterRows.axis = .vertical
-        characterRows.spacing = 6
+        characterRows.spacing = 10
+        typingPanel.spacing = 10
         typingPanel.addArrangedSubview(characterRows)
+        let space = makeTypingKey(title: "space", action: #selector(insertSpace))
+        space.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(moveCursor(_:))))
+        let enter = makeTypingKey(title: "return", action: #selector(insertReturn), utility: true)
+        enter.configuration?.title = nil
+        enter.configuration?.image = UIImage(systemName: "return")
+        enter.accessibilityLabel = "return"
+        let bottom = UIStackView(arrangedSubviews: [symbolsButton, nextKeyboardButton, space, enter])
+        bottom.spacing = 6
+        bottom.axis = .horizontal
+        typingPanel.addArrangedSubview(bottom)
+        bottom.heightAnchor.constraint(equalToConstant: 42).isActive = true
+        symbolsButton.widthAnchor.constraint(equalTo: bottom.widthAnchor, multiplier: 0.17).isActive = true
+        enter.widthAnchor.constraint(equalTo: bottom.widthAnchor, multiplier: 0.22).isActive = true
+        let globeWidth = nextKeyboardButton.widthAnchor.constraint(equalToConstant: 36)
+        globeWidth.priority = .init(999); globeWidth.isActive = true
         rebuildKeys()
 
-        let root = UIStackView(arrangedSubviews: [heading, statusLabel, voicePanel, typingPanel, morePanel, typingControls])
-        root.axis = .vertical
-        root.spacing = 6
-        root.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(root)
-
+        [controlBar, statusLabel, voicePanel, insertButton, typingPanel, correction.view!, morePanel].forEach { rootStack.addArrangedSubview($0) }
+        rootStack.axis = .vertical
+        rootStack.spacing = 8
+        rootStack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(rootStack)
         let moreHeight = morePanel.heightAnchor.constraint(equalToConstant: 38)
-        moreHeight.priority = .init(999)
-        moreHeight.isActive = true
+        moreHeight.priority = .init(999); moreHeight.isActive = true
+        sideConstraints = [rootStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 6),
+                           rootStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -6)]
+        NSLayoutConstraint.activate(sideConstraints)
         NSLayoutConstraint.activate([
-            root.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-            root.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-            root.topAnchor.constraint(equalTo: view.topAnchor, constant: 6),
-            root.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
-            heading.heightAnchor.constraint(equalToConstant: 34),
-            voiceControls.heightAnchor.constraint(equalToConstant: 44),
-
-            typingControls.heightAnchor.constraint(equalToConstant: 42),
-            spaceButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 70),
+            rootStack.topAnchor.constraint(equalTo: view.topAnchor, constant: 6),
+            rootStack.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -6),
+            controlBar.heightAnchor.constraint(equalToConstant: 56),
+            space.widthAnchor.constraint(greaterThanOrEqualToConstant: 70),
         ])
     }
 
+    private func updatePresentation(state: KeyboardRecordingState, snapshot: SharedSessionSnapshot?, consumed: Bool) {
+        let staleRecording = state == .activationNeeded
+            && snapshot.map { [.preparing, .listening, .finalizing].contains($0.phase) } == true
+        let active = [.starting, .recording, .finishing, .meeting].contains(state) || staleRecording
+        let result = !consumed && !(snapshot?.insertableText.isEmpty ?? true)
+            && (snapshot?.phase == .ready || snapshot?.phase == .failed)
+        let transcript = active || result
+        isListeningLayout = state == .recording || state == .meeting
+        typingPanel.isHidden = transcript
+        voicePanel.isHidden = !transcript
+        menuButton.isHidden = active
+        undoButton.isHidden = active
+        cancelButton.isHidden = !isListeningLayout
+        statusLabel.isHidden = !staleRecording && !result && activationFailure == nil && pendingAction == nil
+            && snapshot?.phase != .failed && state != .starting && state != .finishing
+        if active { morePanel.isHidden = true }
+        // Move the same controls, keeping their targets/settings synchronized.
+        if showsTranscript != transcript {
+            controlBar.removeFromSuperview()
+            let position = transcript ? (rootStack.arrangedSubviews.firstIndex(of: voicePanel)! + 1) : 0
+            rootStack.insertArrangedSubview(controlBar, at: position)
+            showsTranscript = transcript
+        }
+        primaryWidth?.constant = transcript ? 104 : 56
+        correctionController?.view.isHidden = transcript || insertedText == nil
+        updateKeyboardHeight()
+    }
+
     private func updateKeyboardHeight() {
-        keyboardHeight?.constant = (typingPanel.isHidden ? 250 : 286) + (morePanel.isHidden ? 0 : 44)
+        let extras = (morePanel.isHidden ? 0 : 46) + (statusLabel.isHidden ? 0 : 38)
+            + (correctionController?.view.isHidden == false ? 38 : 0)
+        keyboardHeight?.constant = CGFloat(showsTranscript ? 250 : 274) + CGFloat(extras)
+        sideConstraints.first?.constant = showsTranscript ? 12 : 6
+        sideConstraints.last?.constant = showsTranscript ? -12 : -6
     }
 
     @objc private func showMore() {
@@ -217,50 +330,97 @@ class KeyboardViewController: UIInputViewController {
         updateKeyboardHeight()
     }
 
-    @objc private func toggleTypingMode() {
-        typingPanel.isHidden.toggle()
-        voicePanel.isHidden = !typingPanel.isHidden
-        modeButton.configuration?.title = typingPanel.isHidden ? "ABC" : "Voice"
-        symbolsButton.isHidden = typingPanel.isHidden
-        updateKeyboardHeight()
-    }
-
     @objc private func toggleShift() {
-        uppercase.toggle()
+        if symbols { alternateSymbols.toggle() } else { uppercase.toggle() }
         rebuildKeys()
     }
 
     @objc private func toggleSymbols() {
         symbols.toggle()
-        if typingPanel.isHidden { toggleTypingMode() }
+        alternateSymbols = false
         rebuildKeys()
+    }
+
+    private func makeTypingKey(title: String, action: Selector, utility: Bool = false) -> UIButton {
+        let key = UIButton(type: .system)
+        var config = UIButton.Configuration.plain()
+        config.title = title
+        config.contentInsets = .zero
+        config.background.cornerRadius = 8
+        config.background.backgroundColor = UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(white: utility ? 0.22 : 0.36, alpha: 1)
+                : (utility ? UIColor(red: 0.67, green: 0.69, blue: 0.72, alpha: 1) : .white)
+        }
+        config.baseForegroundColor = .label
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var attributes = incoming
+            attributes.font = .systemFont(ofSize: title.count == 1 ? 23 : 16)
+            return attributes
+        }
+        key.configuration = config
+        key.layer.shadowColor = UIColor.black.cgColor
+        key.layer.shadowOpacity = 0.08
+        key.layer.shadowOffset = CGSize(width: 0, height: 1)
+        key.layer.shadowRadius = 0
+        key.addTarget(self, action: action, for: .touchUpInside)
+        return key
     }
 
     private func rebuildKeys() {
         characterRows.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        let rows = symbols ? ["1234567890", "-/:;()$&@\"", ".,?!'[]{}#"] : ["qwertyuiop", "asdfghjkl", "zxcvbnm"]
+        let rows = symbols
+            ? (alternateSymbols ? ["[]{}#%^*+=", "_\\|~<>€£¥•", ".,?!'"] : ["1234567890", "-/:;()$&@\"", ".,?!'"])
+            : ["qwertyuiop", "asdfghjkl", "zxcvbnm"]
+        var firstKey: UIButton?
         for (index, characters) in rows.enumerated() {
+            let container = UIView()
             let row = UIStackView()
             row.axis = .horizontal
-            row.distribution = .fillEqually
-            row.spacing = 3
-            if index == 2, !symbols { row.addArrangedSubview(shiftButton) }
+            row.distribution = .fill
+            row.spacing = 6
+            row.translatesAutoresizingMaskIntoConstraints = false
+            container.addSubview(row)
+            characterRows.addArrangedSubview(container)
+            container.heightAnchor.constraint(equalToConstant: 42).isActive = true
+            NSLayoutConstraint.activate([
+                row.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+                row.topAnchor.constraint(equalTo: container.topAnchor),
+                row.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+                row.widthAnchor.constraint(equalTo: container.widthAnchor,
+                    multiplier: index == 1 && !symbols ? 0.9 : 1,
+                    constant: index == 1 && !symbols ? -0.6 : 0)
+            ])
+            if index == 2 { row.addArrangedSubview(shiftButton) }
+            var rowFirst: UIButton?
             for character in characters {
                 let value = uppercase && !symbols ? String(character).uppercased() : String(character)
-                let key = makeButton(title: value, action: #selector(typeCharacter(_:)))
+                let key = makeTypingKey(title: value, action: #selector(typeCharacter(_:)))
                 key.accessibilityLabel = value
                 key.accessibilityIdentifier = "typingKey_" + value
-                key.configuration?.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0)
-                key.titleLabel?.font = .systemFont(ofSize: 20)
                 row.addArrangedSubview(key)
+                if index < 2 || !symbols {
+                    if let firstKey { key.widthAnchor.constraint(equalTo: firstKey.widthAnchor).isActive = true }
+                } else if let rowFirst { key.widthAnchor.constraint(equalTo: rowFirst.widthAnchor).isActive = true }
+                if firstKey == nil { firstKey = key }
+                if rowFirst == nil { rowFirst = key }
             }
-            characterRows.addArrangedSubview(row)
-            row.heightAnchor.constraint(equalToConstant: 38).isActive = true
+            if index == 2 {
+                let delete = makeTypingKey(title: "⌫", action: #selector(deleteBackward), utility: true)
+                delete.accessibilityLabel = "Delete"
+                delete.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(holdDelete(_:))))
+                row.addArrangedSubview(delete)
+                delete.widthAnchor.constraint(equalTo: shiftButton.widthAnchor).isActive = true
+                if symbols { shiftButton.widthAnchor.constraint(equalTo: container.widthAnchor, multiplier: 0.12).isActive = true }
+            }
         }
-        shiftButton.configuration?.title = "⇧"
-        shiftButton.configuration?.baseBackgroundColor = uppercase ? .systemBlue : nil
-        shiftButton.configuration?.baseForegroundColor = uppercase ? .white : nil
-        shiftButton.accessibilityLabel = uppercase ? "Shift on" : "Shift off"
+        shiftButton.configuration?.title = symbols ? (alternateSymbols ? "123" : "#+=") : "⇧"
+        let shiftActive = uppercase && !symbols
+        shiftButton.configuration?.background.backgroundColor = UIColor { traits in
+            shiftActive ? .white : (traits.userInterfaceStyle == .dark
+                ? UIColor(white: 0.22, alpha: 1) : UIColor(red: 0.67, green: 0.69, blue: 0.72, alpha: 1))
+        }
+        shiftButton.accessibilityLabel = symbols ? "More symbols" : (uppercase ? "Shift on" : "Shift off")
         symbolsButton.configuration?.title = symbols ? "ABC" : "123"
     }
 
@@ -292,7 +452,7 @@ class KeyboardViewController: UIInputViewController {
             try store?.write(presence: KeyboardPresence(keyboardID: keyboardID,
                 isVisible: visible, lastVisibleAt: lastVisibleAt, updatedAt: now))
             lastPresenceWrite = now
-        } catch { statusLabel.text = "Could not update keyboard presence: \(error.localizedDescription)" }
+        } catch { DiagnosticLog.error("keyboard.operation", error); statusLabel.text = "Could not update keyboard presence: \(error.localizedDescription)" }
     }
 
     @objc private func refreshSnapshot() {
@@ -302,57 +462,116 @@ class KeyboardViewController: UIInputViewController {
             if hasFullAccess, store == nil { store = try SharedContainerStore() }
             let snapshot = hasFullAccess ? try store?.readSnapshot() : nil
             currentSnapshot = snapshot
-            var state = KeyboardRecordingState.resolve(snapshot, fullAccess: hasFullAccess)
-            if let pending = pendingAction {
-                let acknowledged = pending.command == .start
-                    ? (state == .starting || state == .recording)
-                    : (state == .finishing || state == .ready || state == .activationNeeded)
-                if (acknowledged && (snapshot?.updatedAt ?? .distantPast) > pending.date) || Date().timeIntervalSince(pending.date) >= 5 { pendingAction = nil }
-                else { state = pending.command == .start ? .starting : .finishing }
+            let receipt = try snapshot.flatMap { try store?.readReceipt($0.sessionID) }
+            let consumed = snapshot.map { hasInserted($0.sessionID) } == true || receipt != nil
+            let hasRecovery = snapshot?.phase == .failed && snapshot?.dictation?.pending == nil
+                && !(snapshot?.insertableText.isEmpty ?? true) && !consumed
+            let enabled = try store?.cleanupEnabled() ?? true
+            let configured = snapshot?.cleanupConfigured != false
+            let polished = enabled && configured
+            var polish = UIButton.Configuration.plain()
+            polish.baseForegroundColor = polished ? .systemBlue : .secondaryLabel
+            polish.background.backgroundColor = polished ? UIColor.systemBlue.withAlphaComponent(0.14) : .clear
+            polish.background.cornerRadius = 22
+            polish.background.strokeColor = polished ? .clear : .separator
+            polish.background.strokeWidth = polished ? 0 : 1
+            polish.title = "Polish"
+            polish.image = UIImage(systemName: "sparkles")
+            polish.imagePadding = 4
+            cleanupButton.configuration = polish
+            cleanupButton.accessibilityLabel = "Polish"
+            cleanupButton.accessibilityValue = configured ? (enabled ? "On" : "Off") : "Unavailable"
+            cleanupButton.accessibilityHint = configured ? "Toggles text cleanup for this dictation" : "Choose a cleanup method in Saywick"
+            cleanupButton.accessibilityTraits = polished ? [.button, .selected] : [.button]
+            cleanupButton.isEnabled = hasFullAccess && store != nil && configured
+            let state = KeyboardRecordingState.resolve(snapshot, fullAccess: hasFullAccess)
+            if let pending = pendingAction, snapshot?.acknowledgment?.id == pending.command.id {
+                activationFailure = snapshot?.acknowledgment?.rejection
+                pendingAction = nil
             }
             let needsLaunch = state == .activationNeeded && hasFullAccess
             launchController?.view.isHidden = !needsLaunch
+            launchController?.view.isUserInteractionEnabled = !hasRecovery
+            launchController?.view.alpha = hasRecovery ? 0.45 : 1
             stopButton.isHidden = needsLaunch
-            stopButton.configuration?.title = state.title
-            stopButton.configuration?.image = UIImage(systemName: state == .recording || state == .meeting ? "stop.circle" : "mic.circle")
-            stopButton.isEnabled = state != .starting && state != .finishing
+            let recording = state == .recording || state == .meeting
+            stopButton.configuration?.title = nil
+            stopButton.configuration?.image = UIImage(systemName: recording ? "stop.fill" : "mic.fill")
+            stopButton.configuration?.showsActivityIndicator = state == .starting || state == .finishing
+            stopButton.configuration?.baseBackgroundColor = recording ? .systemRed : .label
+            stopButton.configuration?.baseForegroundColor = recording ? .white : .systemBackground
+            stopButton.accessibilityLabel = recording ? "Stop and insert" : (state == .ready ? "Start dictation" : state.title)
+            stopButton.accessibilityValue = recording ? "Listening" : nil
+            stopButton.isEnabled = state != .starting && state != .finishing && (pendingAction == nil || pendingAction!.timedOut(at: Date()))
             endSessionButton.isHidden = snapshot?.isKeyboardSessionActive() != true
             switch state {
             case .needsAccess: statusLabel.text = "Enable Full Access in keyboard Settings. ABC typing works without it."
-            case .activationNeeded: statusLabel.text = activationFailure ?? "Microphone off. Open Saywick to start, then return here."
+            case .activationNeeded:
+                statusLabel.text = activationFailure ?? (hasRecovery
+                    ? "Interrupted · insert unfinished text before starting again"
+                    : snapshot?.dictation?.issue ?? (snapshot?.phase == .failed ? snapshot?.message : nil))
+                    ?? "Microphone off. Open Saywick to start, then return here."
             case .ready: statusLabel.text = "Ready to dictate · microphone active"
             default: statusLabel.text = snapshot?.message
             }
+            if let pending = pendingAction {
+                statusLabel.text = pending.timedOut(at: Date()) ? "Recorder did not acknowledge. Tap again to retry." : "Waiting for recorder…"
+            }
+            if let issue = snapshot?.dictation?.issue, issue != lastAnnouncedIssue {
+                lastAnnouncedIssue = issue
+                UIAccessibility.post(notification: .announcement, argument: issue)
+            }
+            cancelButton.isEnabled = state == .recording && pendingAction == nil
             insertButton.isHidden = snapshot == nil || snapshot!.insertableText.isEmpty || hasInserted(snapshot!.sessionID)
-            insertButton.isEnabled = snapshot?.phase == .ready
+            insertButton.isHidden = insertButton.isHidden || state == .recording || state == .meeting || state == .starting || state == .finishing
+            let recoverable = snapshot?.phase == .failed && snapshot?.dictation?.pending == nil
+            insertButton.configuration?.title = recoverable ? "Insert recovered" : "Insert Latest"
+            insertButton.isEnabled = snapshot?.phase == .ready || recoverable
             restartButton.isEnabled = state == .recording
-            clearButton.isEnabled = state != .meeting && state != .starting && state != .finishing && snapshot != nil
-            guard let snapshot else { transcriptLabel.text = ""; return }
-            let displayText = snapshot.phase == .ready ? snapshot.insertableText : snapshot.liveText
-            transcriptLabel.text = hasInserted(snapshot.sessionID) ? "Inserted" : displayText
+            clearButton.isEnabled = state != .recording && state != .meeting && state != .starting && state != .finishing && snapshot != nil
+            if consumed { insertButton.isHidden = true }
+            updatePresentation(state: state, snapshot: snapshot, consumed: consumed)
+            guard let snapshot else { updateTranscript(""); return }
+            let displayText = snapshot.phase == .ready || (snapshot.phase == .failed && snapshot.dictation?.pending == nil) ? snapshot.insertableText : snapshot.liveText
+            updateTranscript(consumed ? "Inserted or dismissed" : displayText)
             if snapshot.phase == .ready,
                snapshot.shouldAutoInsert,
                !snapshot.insertableText.isEmpty,
-               !hasInserted(snapshot.sessionID) {
-                insert(snapshot.insertableText)
+               !consumed,
+               insert(snapshot.insertableText) {
                 rememberInserted(snapshot.sessionID)
                 consume(snapshot)
             }
         } catch {
+            DiagnosticLog.error("keyboard.refresh", error)
             statusLabel.text = error.localizedDescription
+            statusLabel.isHidden = false; updateKeyboardHeight()
         }
+    }
+
+    @objc private func toggleCleanup() {
+        do {
+            guard let store else { return }
+            try store.setCleanupEnabled(!store.cleanupEnabled())
+            refreshSnapshot()
+        } catch { statusLabel.text = "Could not change cleanup: \(error.localizedDescription)" }
     }
 
     @objc private func stopAndInsert() {
         let state = KeyboardRecordingState.resolve(currentSnapshot, fullAccess: hasFullAccess)
-        guard pendingAction == nil else { return }
-        guard let command = state.command else {
-            statusLabel.text = state == .needsAccess
-                ? "Settings → General → Keyboard → Keyboards → Saywick → Allow Full Access."
-                : "Tap Open Saywick to activate the microphone."
+        if let pending = pendingAction {
+            guard pending.timedOut(at: Date()) else { return }
+            do { try store?.write(command: pending.command) }
+            catch { DiagnosticLog.error("keyboard.operation", error); statusLabel.text = error.localizedDescription }
             return
         }
-        pendingAction = (command, Date())
+        guard let command = state.command else {
+            activationFailure = state == .needsAccess
+                ? "Settings → General → Keyboard → Keyboards → Saywick → Allow Full Access."
+                : "Tap the microphone to open Saywick."
+            refreshSnapshot()
+            return
+        }
         send(command, status: command == .start ? "Starting…" : "Finishing…")
         refreshSnapshot()
     }
@@ -363,8 +582,8 @@ class KeyboardViewController: UIInputViewController {
 
     @objc private func insertLatest() {
         guard let snapshot = currentSnapshot,
-              !snapshot.insertableText.isEmpty else { return }
-        insert(snapshot.insertableText)
+              !snapshot.insertableText.isEmpty,
+              insert(snapshot.insertableText) else { return }
         rememberInserted(snapshot.sessionID)
         consume(snapshot)
     }
@@ -373,61 +592,38 @@ class KeyboardViewController: UIInputViewController {
         send(.restart, status: "Restarting transcript…")
     }
 
-    @objc private func clearTranscript() {
-        guard let snapshot = currentSnapshot else {
-            send(.clear, status: "Clearing transcript…")
-            return
-        }
+    @objc private func cancelDictation() { send(.cancel, status: "Cancelling…") }
 
+    @objc private func clearTranscript() {
+        guard let snapshot = currentSnapshot else { return }
+        guard snapshot.phase != .listening, snapshot.phase != .preparing, snapshot.phase != .finalizing else { return }
         do {
-            // Once recording has stopped, iOS may suspend the containing app.
-            // Clear the shared file here as well so the button responds now.
-            if snapshot.phase != .listening && !snapshot.isKeyboardSessionActive() {
-                try store?.clearSnapshot(ifSessionID: snapshot.sessionID)
-                clearDisplayedSnapshot(status: "Cleared")
-            }
-            try store?.write(command: VoiceCommand(kind: .clear, sessionID: snapshot.sessionID))
-            if snapshot.phase == .listening {
-                statusLabel.text = "Clearing transcript…"
-            }
-        } catch {
-            statusLabel.text = error.localizedDescription
-        }
+            try store?.write(receipt: ResultReceipt(resultID: snapshot.sessionID, disposition: .dismissed))
+            refreshSnapshot()
+        } catch { DiagnosticLog.error("keyboard.operation", error); statusLabel.text = error.localizedDescription }
     }
 
     private func send(_ command: VoiceCommandKind, status: String) {
+        guard pendingAction == nil else { return }
+        let request = VoiceCommand(kind: command, sessionID: command == .endSession ? nil : currentSnapshot?.sessionID)
         do {
-            try store?.write(command: VoiceCommand(kind: command, sessionID: command == .endSession ? nil : currentSnapshot?.sessionID))
+            try store?.write(command: request)
+            pendingAction = PendingKeyboardCommand(command: request)
             statusLabel.text = status
-        } catch {
-            statusLabel.text = error.localizedDescription
-        }
+        } catch { DiagnosticLog.error("keyboard.operation", error); statusLabel.text = error.localizedDescription }
     }
 
     private func consume(_ snapshot: SharedSessionSnapshot) {
-        // Keep the ready session and its ID. Sending Clear here used to race
-        // the next Start command because the app rotates its ID on Clear.
-        if snapshot.isKeyboardSessionActive() {
-            transcriptLabel.text = "Inserted"
-            refreshSnapshot()
-            return
-        }
-        do { try store?.clearSnapshot(ifSessionID: snapshot.sessionID) }
-        catch { statusLabel.text = "Inserted; could not clear saved keyboard state" }
+        do { try store?.write(receipt: ResultReceipt(resultID: snapshot.sessionID, disposition: .inserted)) }
+        catch { DiagnosticLog.error("keyboard.operation", error); statusLabel.text = "Inserted; could not save insertion receipt" }
         refreshSnapshot()
     }
 
-    private func clearDisplayedSnapshot(status: String) {
-        currentSnapshot = nil
-        transcriptLabel.text = "No transcript yet"
-        statusLabel.text = status
-        stopButton.isEnabled = false
-        insertButton.isEnabled = false
-        restartButton.isEnabled = false
-        clearButton.isEnabled = false
-    }
-
-    private func insert(_ text: String) {
+    @discardableResult
+    private func insert(_ text: String) -> Bool {
+        // Loading/transitioning keyboards may have a proxy that cannot accept text yet.
+        // Leave the result unconsumed until this keyboard is attached and has appeared.
+        guard canInsertIntoHost, viewIfLoaded?.window != nil else { return false }
         let prefix: String
         if let context = textDocumentProxy.documentContextBeforeInput,
            !context.isEmpty,
@@ -442,9 +638,26 @@ class KeyboardViewController: UIInputViewController {
         textDocumentProxy.insertText(inserted)
         insertedText = inserted
         insertedContext = textDocumentProxy.documentContextBeforeInput
-        insertedDocument = textDocumentProxy.documentIdentifier
+        insertedDocument = currentDocumentIdentifier()
         undoButton.isEnabled = canUndoInsertion
+        let context = VocabularyCorrectionContext(transcript: text)
+        correctionController?.rootView = KeyboardCorrectionLink(context: context, prepare: { [weak self] context in
+            guard let self else { return false }
+            do {
+                guard let store = self.store else { throw SharedContainerError.missingAppGroupIdentifier }
+                try store.write(correctionContext: context)
+                return true
+            } catch {
+                self.statusLabel.text = "Could not prepare correction. Try again or open Saywick History."
+                return false
+            }
+        }, rejected: { [weak self] in
+            try? self?.store?.removeCorrectionContext()
+            self?.statusLabel.text = "iOS could not open Saywick. Open the app and add a correction in History."
+        })
+        correctionController?.view.isHidden = false
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        return true
     }
 
     @objc private func nextKeyboard() {
@@ -467,11 +680,11 @@ class KeyboardViewController: UIInputViewController {
     }
 
     private func hasInserted(_ id: UUID) -> Bool {
-        insertedDefaults?.string(forKey: "lastInsertedSession") == id.uuidString
+        insertedIDs.contains(id) || insertedDefaults?.string(forKey: "lastInsertedSession") == id.uuidString
     }
 
     private func rememberInserted(_ id: UUID) {
-        insertedDefaults?.set(id.uuidString, forKey: "lastInsertedSession")
+        insertedIDs.insert(id)
     }
 
     private var insertedDefaults: UserDefaults? {
@@ -481,9 +694,21 @@ class KeyboardViewController: UIInputViewController {
         return UserDefaults(suiteName: identifier)
     }
 
+    private func currentDocumentIdentifier() -> UUID? {
+        // Some host proxies return nil despite UIKit's nonnull declaration. Reading
+        // the Swift UUID property traps before an optional cast can handle it.
+        // Fetch the public Objective-C getter as an object, then bridge if present.
+        let selector = #selector(getter: UITextDocumentProxy.documentIdentifier)
+        guard let proxy = textDocumentProxy as? NSObject,
+              proxy.responds(to: selector),
+              let identifier = proxy.perform(selector)?.takeUnretainedValue() as? NSUUID else { return nil }
+        return identifier as UUID
+    }
+
     private var canUndoInsertion: Bool {
-        guard let insertedText, !insertedText.isEmpty, let context = textDocumentProxy.documentContextBeforeInput else { return false }
-        return insertedDocument == textDocumentProxy.documentIdentifier && context == insertedContext && context.hasSuffix(insertedText)
+        guard let insertedDocument, let currentDocument = currentDocumentIdentifier(),
+              let insertedText, !insertedText.isEmpty, let context = textDocumentProxy.documentContextBeforeInput else { return false }
+        return insertedDocument == currentDocument && context == insertedContext && context.hasSuffix(insertedText)
     }
     @objc private func undoInsertion() {
         guard canUndoInsertion, let insertedText else { statusLabel.text = "Text changed; undo is unavailable. Recover the original in History."; return }
@@ -518,13 +743,49 @@ private struct KeyboardAppLink: View {
                 if !accepted { rejected() }
             }
         } label: {
-            Label("Open Saywick", systemImage: "arrow.up.forward.app")
-                .font(.system(size: 16, weight: .semibold))
+            Image(systemName: "mic.fill")
+                .font(.system(size: 28, weight: .semibold))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .foregroundStyle(.white)
-                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 12))
+                .foregroundStyle(Color(uiColor: .systemBackground))
+                .background(Color.primary, in: Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Open Saywick to start dictation")
         .accessibilityIdentifier("openSaywick")
+    }
+}
+
+/// Scroll after the text view itself has its final bounds and text layout.
+private final class LiveTranscriptView: UITextView {
+    var scrollToEndOnLayout = false
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard scrollToEndOnLayout, bounds.width > 0, bounds.height > 0 else { return }
+        scrollToEndOnLayout = false
+        let contentHeight = sizeThatFits(CGSize(width: bounds.width, height: .greatestFiniteMagnitude)).height
+        setContentOffset(CGPoint(x: 0, y: max(0, contentHeight - bounds.height)), animated: false)
+    }
+}
+
+private struct KeyboardCorrectionLink: View {
+    @Environment(\.openURL) private var openURL
+    let context: VocabularyCorrectionContext?
+    let prepare: (VocabularyCorrectionContext) -> Bool
+    let rejected: () -> Void
+    var body: some View {
+        if let context {
+            Button {
+                guard prepare(context) else { return }
+                openURL(URL(string: "saywick://fix-word?id=" + context.id.uuidString)!) { accepted in
+                    if !accepted { rejected() }
+                }
+            } label: {
+                Label("Fix a word", systemImage: "character.cursor.ibeam")
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .accessibilityIdentifier("fixAWord")
+        }
     }
 }

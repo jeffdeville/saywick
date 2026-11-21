@@ -11,13 +11,12 @@ protocol LiveSpeechEngine: AnyObject {
     func prepare() async throws
     func start() async throws
     func stop() async throws
-    func discardCurrentAudio() async throws
+    func cancel() async
 }
 
 extension LiveSpeechEngine {
     var requiresMicrophoneAuthorization: Bool { true }
     var archiveURL: URL? { get { nil } set {} }
-    func discardCurrentAudio() async throws {}
 }
 
 enum SpeechEngineError: LocalizedError {
@@ -42,14 +41,13 @@ enum SpeechEngineError: LocalizedError {
 
 @MainActor
 enum LiveSpeechEngineFactory {
-    static func make(allowModelDownload: Bool = true, meeting: Bool = false) -> any LiveSpeechEngine {
+    static func make(allowModelDownload: Bool = true) -> any LiveSpeechEngine {
         #if targetEnvironment(simulator)
         if ProcessInfo.processInfo.environment["LOCAL_VOICE_SIMULATOR_DEMO"] == "1" {
             return SimulatorSpeechEngine(representing: .parakeetStreaming)
         }
         #endif
 
-        if meeting { return MeetingRecordingEngine() }
         return ParakeetSpeechEngine(allowModelDownload: allowModelDownload)
     }
 }

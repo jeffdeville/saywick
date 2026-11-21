@@ -49,21 +49,24 @@ public enum PostProcessorID: String, CaseIterable, Codable, Identifiable, Sendab
     case rules
     case foundationModels
     case foundationModelsStructured
+    case openAILuna
 
     public var id: String { rawValue }
 
-    public var usesLanguageModel: Bool { self == .foundationModels || self == .foundationModelsStructured }
+    public var usesLanguageModel: Bool { self == .foundationModels || self == .foundationModelsStructured || self == .openAILuna }
 
     public var displayName: String {
         switch self {
         case .none:
-            "Raw transcript"
+            "Off — raw transcript"
         case .rules:
             "Fast local rules"
         case .foundationModels:
             "Faithful cleanup (Apple Intelligence)"
         case .foundationModelsStructured:
             "Paragraphs & bullets (Apple Intelligence)"
+        case .openAILuna:
+            "Faithful cleanup (OpenAI GPT-6 Luna)"
         }
     }
 }

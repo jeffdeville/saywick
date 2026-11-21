@@ -1,9 +1,8 @@
 @preconcurrency import AVFoundation
 import Foundation
 
-/// Written from the owning engine's serial main-actor audio consumer, never
+/// Written from the owning engine's serial audio worker, never
 /// from the realtime tap. The file also survives failed network requests.
-@MainActor
 final class AudioArchive {
     let url: URL
     private var file: AVAudioFile?
@@ -15,7 +14,7 @@ final class AudioArchive {
         self.url = url
         file = try AVAudioFile(forWriting: url, settings: Self.format.settings,
                                commonFormat: .pcmFormatInt16, interleaved: false)
-        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUnlessOpen],
                                               ofItemAtPath: url.path)
     }
     func append(_ buffer: AVAudioPCMBuffer) throws {

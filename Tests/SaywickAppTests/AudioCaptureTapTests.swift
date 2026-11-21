@@ -33,10 +33,20 @@ final class AudioCaptureTapTests: XCTestCase {
             throw XCTSkip("Grant Saywick microphone access before this device test")
         }
         let engine = ParakeetSpeechEngine()
+        let archive = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".wav")
+        engine.archiveURL = archive
+        let microphone = MicrophoneCapture.shared
+        defer { microphone.endSession(); try? FileManager.default.removeItem(at: archive) }
         try await engine.prepare()
-        try await engine.start()
-        try await Task.sleep(for: .seconds(3))
-        try await engine.stop()
+        // Hardware activation moved out of engines into the recording controller.
+        try microphone.start()
+        do {
+            try await engine.start()
+            try await Task.sleep(for: .seconds(3))
+            try await engine.stop()
+        } catch { await engine.cancel(); throw error }
+        XCTAssertGreaterThan(try AVAudioFile(forReading: archive).length, 0, "Real microphone samples must reach the engine archive")
+        XCTAssertTrue(microphone.isRunning, "Only the owner releases idle capture")
         for await event in engine.updates {
             if case .failure(let message) = event { XCTFail(message) }
         }

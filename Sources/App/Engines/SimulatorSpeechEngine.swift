@@ -59,5 +59,6 @@ final class SimulatorSpeechEngine: LiveSpeechEngine {
         try? await Task.sleep(for: .milliseconds(20))
         continuation.finish()
     }
+    func cancel() async { playbackTask?.cancel(); playbackTask = nil; continuation.finish() }
 }
 #endif

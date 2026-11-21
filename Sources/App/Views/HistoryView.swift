@@ -79,7 +79,7 @@ private struct HistoryDetailView: View {
                 Section("Transcribe audio") {
                     Button("Transcribe with Parakeet") { run(entry) }
                         .accessibilityIdentifier("runComparison").disabled(disabled || !entry.hasAudio)
-                    Text("Saves a new on-device transcript using current cleanup and custom words. Earlier transcripts are kept.").font(.caption)
+                    Text("Saves a new transcript using current cleanup and custom words. OpenAI cleanup sends text to OpenAI. Earlier transcripts are kept.").font(.caption)
                 }.disabled(disabled)
                 if model.history.isWorking { Button("Cancel operation") { model.history.cancelWork() } }
                 ForEach(entry.runs) { result in
@@ -93,11 +93,11 @@ private struct HistoryDetailView: View {
                         }.font(.caption)
                         Text("Original").font(.headline)
                         Text(result.rawText.isEmpty ? "No recognized text" : result.rawText).textSelection(.enabled)
-                        Button("Copy original") { UIPasteboard.general.string = result.rawText }
+                        CopyHistoryTextButton(title: "Copy original", text: result.rawText)
                         Button("Use original in keyboard") { model.restoreOutput(result.rawText) }.disabled(disabled || result.rawText.isEmpty)
                         Text("Final").font(.headline)
                         Text(result.finalText.isEmpty ? "No final text" : result.finalText).textSelection(.enabled)
-                        Button("Copy final") { UIPasteboard.general.string = result.finalText }
+                        CopyHistoryTextButton(title: "Copy final", text: result.finalText)
                         Button("Use final in keyboard") { model.restoreOutput(result.finalText) }.disabled(disabled || result.finalText.isEmpty)
                         Button("Reprocess original with current settings") {
                             model.history.compare(entry, engine: result.engine, cleanup: model.selectedPostProcessorID,
@@ -144,4 +144,28 @@ struct ActivityShareView: UIViewControllerRepresentable {
     let items: [Any]
     func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: items, applicationActivities: nil) }
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+private struct CopyHistoryTextButton: View {
+    let title: String
+    let text: String
+    @State private var copied = false
+    @State private var feedbackID = UUID()
+
+    var body: some View {
+        Button {
+            UIPasteboard.general.string = text
+            let id = UUID()
+            feedbackID = id
+            copied = true
+            UIAccessibility.post(notification: .announcement, argument: "Copied")
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                if feedbackID == id { copied = false }
+            }
+        } label: {
+            Label(copied ? "Copied" : title, systemImage: copied ? "checkmark" : "doc.on.doc")
+        }
+        .disabled(text.isEmpty)
+    }
 }

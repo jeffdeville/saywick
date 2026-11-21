@@ -1,10 +1,13 @@
 """Apply explicit iOS packaging choices to the pinned upstream build script."""
 from pathlib import Path
 import sys
+import shlex
 
 source = Path(sys.argv[1])
 text = source.read_text()
 changes = {
+    '-DCMAKE_BUILD_TYPE=Release':
+        '-DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS_RELEASE="-O3 -DNDEBUG -g" -DCMAKE_CXX_FLAGS_RELEASE="-O3 -DNDEBUG -g"',
     'build_arch ios-device iOS iphoneos arm64 ON':
         'build_arch ios-device iOS iphoneos arm64 OFF',
     '    local extra=()':
@@ -19,6 +22,18 @@ for old, new in changes.items():
     if text.count(old) != 1:
         raise RuntimeError(f"Upstream packaging changed: expected one {old!r}")
     text = text.replace(old, new)
+# Keep optimized code while producing the exact symbols Apple needs for native crashes.
+old = '    cp "$dylib" "$binpath"'
+if text.count(old) != 1:
+    raise RuntimeError("Upstream framework assembly changed")
+manifest = Path(__file__).with_name("PrivacyInfo.xcprivacy").resolve()
+text = text.replace(old, old + '\n    xcrun dsymutil "$binpath" -o "${fw}.dSYM"\n    cp ' + shlex.quote(str(manifest)) + ' "$fw/PrivacyInfo.xcprivacy"')
+for platform in ["macos", "ios-device", "ios-sim"]:
+    framework = '${BUILD_ROOT}/fw-' + platform + '/${FRAMEWORK_NAME}.framework'
+    old = 'XCARGS+=(-framework "' + framework + '")'
+    if text.count(old) != 1:
+        raise RuntimeError("Upstream XCFramework symbol packaging changed")
+    text = text.replace(old, 'XCARGS+=(-framework "' + framework + '" -debug-symbols "' + framework + '.dSYM")')
 source.with_name("build_saywick_xcframework.sh").write_text(text)
 
 # Upstream forces the separate ggml BLAS backend off. Preserve its default,

@@ -10,6 +10,7 @@ struct LocalVoiceKeyboardApp: App {
         WindowGroup {
             ContentView(model: model)
                 .task {
+                    AppleDiagnostics.shared.start()
                     await model.startServices()
                     SaywickShortcuts.updateAppShortcutParameters()
                 }

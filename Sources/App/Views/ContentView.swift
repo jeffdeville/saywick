@@ -3,10 +3,15 @@ import VoiceKeyboardCore
 
 struct ContentView: View {
     @Bindable var model: AppModel
+    @State private var openAIKey = ""
+    @State private var keyMessage = ""
     @State private var showContactPicker = false
     @State private var pendingContactWords: [String] = []
     @State private var showContactReview = false
     @State private var newWord = ""
+    @State private var diagnosticItems: [Any] = []
+    @State private var sharingDiagnostics = false
+    @State private var diagnosticError: String?
 
     var body: some View {
         TabView(selection: $model.selectedTab) {
@@ -14,12 +19,13 @@ struct ContentView: View {
             Form {
                 statusSection
                 controlsSection
-                if !model.isMeetingRecording { transcriptSection }
+                transcriptSection
                 modelSection
                 customWordsSection
-                if !model.isMeetingRecording { metricsSection }
+                metricsSection
                 keyboardSection
                 privacySection
+                #if DEBUG
                 Section("App opening diagnostics") {
                     DisclosureGroup("Recent activity") {
                         Text("Records opening links and foreground changes, without transcript contents. iOS does not always identify what brought an app forward.")
@@ -33,12 +39,19 @@ struct ContentView: View {
                         }
                     }
                 }
+                #endif
             }
             .navigationTitle("Saywick")
         }
         .tabItem { Label("Dictate", systemImage: "mic") }.tag(0)
         HistoryView(model: model).tabItem { Label("History", systemImage: "clock.arrow.circlepath") }.tag(1)
         }
+        .sheet(item: $model.correctionContext) { context in
+            CorrectionSheet(model: model, context: context)
+        }
+        .alert("Could not open correction", isPresented: Binding(get: { model.correctionError != nil }, set: { if !$0 { model.correctionError = nil } })) {
+            Button("OK") { model.correctionError = nil }
+        } message: { Text(model.correctionError ?? "") }
     }
 
     private var statusSection: some View {
@@ -81,14 +94,15 @@ struct ContentView: View {
                 Button(role: .destructive) {
                     Task { await model.stopRecording() }
                 } label: {
-                    Label(model.isMeetingRecording ? "Stop meeting" : "Stop and clean up", systemImage: "stop.circle.fill")
+                    Label("Stop dictation", systemImage: "stop.circle.fill")
                 }
 
-                if !model.isMeetingRecording { Button {
+                    Button("Cancel dictation", role: .destructive) { Task { await model.cancelRecording() } }
+                    Button {
                     model.restartTranscript()
                 } label: {
                     Label("Restart transcript", systemImage: "arrow.clockwise.circle")
-                } }
+                }
             } else {
                 Button {
                     Task { await model.startRecording() }
@@ -96,20 +110,14 @@ struct ContentView: View {
                     Label("Start listening", systemImage: "mic.circle.fill")
                 }
                 .disabled(model.isBusy || model.history.isWorking)
-                Button {
-                    Task { await model.startRecording(kind: .meeting) }
-                } label: {
-                    Label("Record meeting", systemImage: "person.2.wave.2")
-                }.disabled(model.isBusy || model.history.isWorking)
-                Text("Meetings save audio locally, even if dictation audio retention is off. Record for up to 4 hours with the screen locked, then transcribe with Parakeet in History. Stop from the Live Activity or the Stop recording shortcut.")
-                    .font(.caption).foregroundStyle(.secondary)
+
             }
 
             Button("Clear", role: .destructive) {
                 model.clear()
             }
             .disabled(
-                model.isMeetingRecording || model.phase == .preparing
+                model.phase == .preparing
                     || model.phase == .finalizing
                     || (!model.canStop && model.transcript.isEmpty && model.processedText.isEmpty)
             )
@@ -118,11 +126,21 @@ struct ContentView: View {
 
     private var transcriptSection: some View {
         Section(model.phase == .listening ? "Live draft" : "Transcript") {
-            Text(resultText.isEmpty ? "Your live draft will appear here. Sentence breaks and capitalization may change after Stop." : resultText)
-                .foregroundStyle(resultText.isEmpty ? .secondary : .primary)
-                .accessibilityIdentifier("transcriptText")
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+            ScrollViewReader { reader in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(resultText.isEmpty ? "Your live draft will appear here. Sentence breaks and capitalization may change after Stop." : resultText)
+                            .foregroundStyle(resultText.isEmpty ? .secondary : .primary)
+                            .accessibilityIdentifier("transcriptText")
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                        Color.clear.frame(height: 1).id("transcriptEnd")
+                    }
+                }
+                .frame(height: 120)
+                .onChange(of: resultText) { _, _ in reader.scrollTo("transcriptEnd", anchor: .bottom) }
+                .onAppear { reader.scrollTo("transcriptEnd", anchor: .bottom) }
+            }
 
             if !model.processedText.isEmpty {
                 Button {
@@ -141,13 +159,31 @@ struct ContentView: View {
                 .font(.caption)
             Link("Parakeet by NVIDIA · GGUF by Handy · CC BY 4.0", destination: URL(string: "https://huggingface.co/handy-computer/parakeet-unified-en-0.6b-gguf")!)
                 .font(.caption)
-            Picker("Cleanup", selection: $model.selectedPostProcessorID) {
+            Picker("Post-processing", selection: $model.selectedPostProcessorID) {
                 ForEach(PostProcessorID.allCases) { processor in
                     Text(processor.displayName).tag(processor)
                 }
             }
             .disabled(model.isBusy)
 
+            Text(model.selectedPostProcessorID == .none
+                 ? "Off — inserts the recognizer’s text without AI cleanup. Custom-word replacements still apply."
+                 : model.selectedPostProcessorID == .openAILuna ? "After Stop, transcript text is sent to OpenAI for cleanup. This uses your API account and can incur charges." : "Optional cleanup runs locally after Stop and can add a delay.")
+                .font(.caption)
+            Text("The keyboard Cleanup switch applies to dictations stopped from the keyboard, app, or shortcut. It does not affect History reprocessing.").font(.caption)
+            if model.selectedPostProcessorID == .openAILuna {
+                SecureField("OpenAI API key", text: $openAIKey)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                Button("Save API key") {
+                    do { try OpenAIKeyStore.save(openAIKey); openAIKey = ""; keyMessage = "API key saved." }
+                    catch { keyMessage = "Could not save API key." }
+                }
+                Button("Remove API key", role: .destructive) {
+                    do { try OpenAIKeyStore.save(""); openAIKey = ""; keyMessage = "API key removed." }
+                    catch { keyMessage = "Could not remove API key." }
+                }
+                Text(keyMessage).font(.caption)
+            }
             if model.selectedPostProcessorID.usesLanguageModel {
                 Text("Runs after Stop. Repairs sentence breaks across thinking pauses while preserving your words. Original text stays in History.")
                     .font(.caption)
@@ -224,7 +260,7 @@ struct ContentView: View {
             if let error = model.customWordsError {
                 Text(error).foregroundStyle(.red).font(.caption)
             }
-            Text("Cleanup is optional and runs on device. Raw transcript keeps the recognizer’s wording plus your custom-word corrections. Faithful cleanup repairs punctuation and capitalization after Stop. Paragraphs and bullets are opt-in. Edits that add, omit or reorder words are rejected.")
+            Text("Cleanup is optional; OpenAI cleanup sends transcript text to OpenAI when selected. Raw transcript keeps the recognizer’s wording plus your custom-word corrections. Faithful cleanup repairs punctuation and capitalization after Stop. Paragraphs and bullets are opt-in. Edits that add, omit or reorder words are rejected.")
                 .font(.caption)
         }
         .disabled(model.isBusy)
@@ -249,7 +285,7 @@ struct ContentView: View {
             Button("Set up background dictation") {
                 Task { await model.prepareBackgroundDictation() }
             }.disabled(model.isBusy || model.history.isWorking || model.isKeyboardSessionActive)
-            Text("Setup grants microphone access and downloads Parakeet once. Add Start dictation, Record meeting, or Stop recording from Saywick in Shortcuts. Meeting recording does not need the model download.")
+            Text("Setup grants microphone access and downloads Parakeet once. Add Start dictation or Stop recording from Saywick in Shortcuts.")
                 .font(.caption)
 
             Button("Open this app’s Settings") {
@@ -264,7 +300,24 @@ struct ContentView: View {
 
     private var privacySection: some View {
         Section("Privacy") {
-            Label("Audio and text stay on this iPhone after Parakeet’s one-time download.", systemImage: "lock.shield")
+            Button("Export diagnostics") {
+                Task {
+                    do { diagnosticItems = [try await DiagnosticLog.export()]; sharingDiagnostics = true; diagnosticError = nil }
+                    catch { diagnosticError = "Could not prepare diagnostics. Try again after unlocking the device." }
+                }
+            }
+            .sheet(isPresented: $sharingDiagnostics) { ActivityShareView(items: diagnosticItems) }
+            Text("Includes recent error codes and Apple-provided crash/performance reports when available. No transcript or audio is added by Saywick. Apple reports may contain device and process details. Share only with someone you trust.")
+                .font(.caption)
+            if let diagnosticError { Text(diagnosticError).foregroundStyle(.red) }
+
+            NavigationLink("Privacy policy") {
+                ScrollView {
+                    Text("Saywick transcribes recordings on this device. If you select OpenAI cleanup, transcript text and relevant custom words are sent to OpenAI using your API key. Other cleanup options run on this device. There are no advertising or analytics SDKs.\n\nThe one-time speech model download connects to Hugging Face and its delivery providers, which receive ordinary connection information such as your IP address.\n\nFull Access lets the keyboard exchange commands and transcripts with Saywick locally. Basic typing works without Full Access. Only names you select and confirm in the Contacts picker are saved as custom words.\n\nHistory stores text and optional audio locally. Retention settings and deletion controls are in History; pinned recordings are exempt from automatic expiry. Previously saved recordings remain until deleted or expired. Copies you export or share are controlled by their destination app.\n\niOS may collect and share system diagnostics according to your Apple privacy settings. Saywick keeps a bounded local diagnostic log and Apple-provided performance/crash reports. You can choose to export these for support. Saywick does not upload diagnostic reports itself.")
+                        .padding().textSelection(.enabled)
+                }.navigationTitle("Privacy policy")
+            }
+            Label("Audio stays on this iPhone. OpenAI cleanup sends transcript text when selected.", systemImage: "lock.shield")
             Text("The keyboard extension never opens the microphone. The containing app records and transcribes; the two processes exchange small JSON files in their App Group container.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -310,6 +363,45 @@ private extension SharedSessionPhase {
         case .finalizing: "Finalizing"
         case .ready: "Ready"
         case .failed: "Needs attention"
+        }
+    }
+}
+
+private struct CorrectionSheet: View {
+    let model: AppModel
+    let context: VocabularyCorrectionContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var heard = ""
+    @State private var preferred = ""
+    @State private var error: String?
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Latest inserted transcript") {
+                    Text(context.transcript).textSelection(.enabled)
+                }
+                Section("Spelling correction") {
+                    TextField("Incorrect word or phrase", text: $heard)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .accessibilityIdentifier("correctionHeard")
+                    TextField("Desired spelling", text: $preferred)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .accessibilityIdentifier("correctionPreferred")
+                    Text("Enter the incorrect word or phrase exactly as it appears above. Saving enables custom words for future dictations. The text already inserted stays as it is.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    if let error { Text(error).foregroundStyle(.red) }
+                    Button("Save correction") {
+                        do {
+                            try model.addCorrection(heard: heard, preferred: preferred, transcript: context.transcript)
+                            dismiss()
+                        } catch { self.error = error.localizedDescription }
+                    }
+                    .disabled(heard.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || preferred.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("saveCorrection")
+                }
+            }
+            .navigationTitle("Fix a word")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
     }
 }

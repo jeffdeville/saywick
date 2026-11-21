@@ -21,6 +21,8 @@ packages:
 
 settings:
   base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "5"
     SWIFT_VERSION: 6.0
     SWIFT_STRICT_CONCURRENCY: complete
     TARGETED_DEVICE_FAMILY: "1,2"
@@ -50,6 +52,8 @@ targets:
     info:
       path: Config/LocalVoiceKeyboard-Info.plist
       properties:
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
         AppGroupIdentifier: $(APP_GROUP_IDENTIFIER)
         CFBundleDisplayName: Saywick
         NSSupportsLiveActivities: true
@@ -102,6 +106,8 @@ targets:
     info:
       path: Config/KeyboardExtension-Info.plist
       properties:
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
         AppGroupIdentifier: $(APP_GROUP_IDENTIFIER)
         CFBundleDisplayName: Saywick
         NSExtension:
@@ -135,6 +141,8 @@ targets:
     info:
       path: Config/StatusWidget-Info.plist
       properties:
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleDisplayName: Saywick Status
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
@@ -146,6 +154,7 @@ targets:
       - Tests/SaywickAppTests
       - Sources/KeyboardExtension/KeyboardViewController.swift
       - Sources/Shared/SharedContainerStore.swift
+      - Sources/Shared/DiagnosticLog.swift
     dependencies:
       - target: LocalVoiceKeyboard
     settings:
@@ -176,6 +185,7 @@ schemes:
       config: Debug
     test:
       config: Debug
+      gatherCoverageData: true
       targets:
         - LocalVoiceKeyboardUITests
         - SaywickAppTests

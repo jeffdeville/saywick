@@ -25,27 +25,20 @@ final class LocalVoiceKeyboardUITests: XCTestCase {
         let restore = app.buttons["Use original in keyboard"].firstMatch
         for _ in 0..<6 where !restore.isHittable { app.swipeUp() }
         XCTAssertTrue(restore.waitForExistence(timeout: 5))
+        let copy = app.buttons["Copy original"].firstMatch
+        XCTAssertTrue(copy.waitForExistence(timeout: 5))
+        copy.tap()
+        XCTAssertTrue(app.buttons["Copied"].waitForExistence(timeout: 2))
         restore.tap()
         XCTAssertTrue(app.staticTexts["Restored from History — ready to insert"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["transcriptText"].label.contains("local voice simulator"))
     }
 
-    func testMeetingSavesWithoutCleanupAndIgnoresClear() throws {
+    func testMeetingModeIsRemoved() throws {
         let app = XCUIApplication()
-        app.launchEnvironment["LOCAL_VOICE_SIMULATOR_DEMO"] = "1"
-        app.launchArguments = ["-selectedPostProcessor", "none", "-customWords", "", "-keepAudio", "NO"]
         app.launch()
-        let meeting = app.buttons["Record meeting"]
-        XCTAssertTrue(meeting.waitForExistence(timeout: 5))
-        meeting.tap()
-        let stop = app.buttons["Stop meeting"]
-        XCTAssertTrue(stop.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Clear"].isEnabled)
-        XCTAssertFalse(app.buttons["Restart transcript"].exists)
-        stop.tap()
-        XCTAssertTrue(app.staticTexts["Meeting saved — transcribe it in History"].waitForExistence(timeout: 5))
-        app.tabBars.buttons["History"].tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Meeting")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Start listening"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Record meeting"].exists)
     }
 
     private func verifyDemo(engine: String, customWords: String = "") throws {
@@ -65,7 +58,7 @@ final class LocalVoiceKeyboardUITests: XCTestCase {
             ].waitForExistence(timeout: 5)
         )
 
-        let stopButton = app.buttons["Stop and clean up"]
+        let stopButton = app.buttons["Stop dictation"]
         XCTAssertTrue(stopButton.waitForExistence(timeout: 5))
         stopButton.tap()
 

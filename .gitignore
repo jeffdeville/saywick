@@ -13,3 +13,5 @@ Config/Local.xcconfig
 *.mp3
 *.caf
 *.xcresult/
+.local-diagnostics/
+__pycache__/

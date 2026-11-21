@@ -47,8 +47,7 @@ final class AudioArchiveTests: XCTestCase {
         try archive.append(samples)
         archive.close()
 
-        let history = HistoryModel()
-        history.store = store
+        let history = HistoryModel(root: root)
         history.reload()
         let saved = try XCTUnwrap(history.entries.first)
         XCTAssertEqual(saved.id, entry.id)

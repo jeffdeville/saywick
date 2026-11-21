@@ -23,6 +23,9 @@ public struct SharedSessionSnapshot: Codable, Equatable, Sendable {
     public var keyboardSessionExpiresAt: Date?
     public var keyboardSessionActive: Bool?
     public var isMeeting: Bool?
+    public var dictation: DictationSession?
+    public var acknowledgment: CommandAcknowledgment?
+    public var cleanupConfigured: Bool?
 
     public init(
         sessionID: UUID = UUID(),
@@ -67,12 +70,15 @@ public struct SharedSessionSnapshot: Codable, Equatable, Sendable {
     }
 
     public var insertableText: String {
-        processedText.isEmpty ? finalizedText : processedText
+        if !processedText.isEmpty { return processedText }
+        if phase == .failed && dictation?.pending == nil { return liveText }
+        return finalizedText
     }
 }
 
 public enum VoiceCommandKind: String, Codable, Sendable {
     case start
+    case cancel
     case endSession
     case stop
     case stopAndInsert
@@ -182,4 +188,14 @@ public enum KeyboardReadiness {
 
 public enum RecordingLimits {
     public static let maximumDuration: TimeInterval = 4 * 60 * 60
+}
+
+/// Exact keyboard insertion offered for an explicit, app-owned spelling correction.
+public struct VocabularyCorrectionContext: Codable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let transcript: String
+    public init(id: UUID = UUID(), transcript: String) {
+        self.id = id
+        self.transcript = transcript
+    }
 }

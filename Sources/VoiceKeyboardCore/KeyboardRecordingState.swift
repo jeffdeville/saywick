@@ -6,6 +6,19 @@ public enum KeyboardRecordingState: Equatable, Sendable {
     public static func resolve(_ snapshot: SharedSessionSnapshot?, fullAccess: Bool, now: Date = Date()) -> Self {
         guard fullAccess else { return .needsAccess }
         guard let snapshot, abs(now.timeIntervalSince(snapshot.updatedAt)) < 5 else { return .activationNeeded }
+        if let session = snapshot.dictation {
+            switch session.pending {
+            case .activating, .starting: return .starting
+            case .cancelling, .deactivating: return .finishing
+            case nil: break
+            }
+            switch session.state {
+            case .inactive: return .activationNeeded
+            case .activated: return snapshot.isKeyboardSessionActive(at: now) ? .ready : .activationNeeded
+            case .transcribing: return snapshot.isMeeting == true ? .meeting : .recording
+            case .postProcess: return .finishing
+            }
+        }
         switch snapshot.phase {
         case .preparing: return .starting
         case .finalizing: return .finishing

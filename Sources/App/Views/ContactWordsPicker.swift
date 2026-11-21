@@ -13,16 +13,20 @@ struct ContactWordsPicker: UIViewControllerRepresentable {
         return picker
     }
     func updateUIViewController(_ controller: CNContactPickerViewController, context: Context) {}
-    final class Coordinator: NSObject, CNContactPickerDelegate {
+    @MainActor final class Coordinator: NSObject, CNContactPickerDelegate {
         let parent: ContactWordsPicker
         init(parent: ContactWordsPicker) { self.parent = parent }
-        func contactPicker(_ picker: CNContactPickerViewController, didSelect contacts: [CNContact]) {
+        nonisolated func contactPicker(_ picker: CNContactPickerViewController, didSelect contacts: [CNContact]) {
             let names = contacts.flatMap { contact in
                 [contact.givenName, contact.familyName, [contact.givenName, contact.familyName].filter { !$0.isEmpty }.joined(separator: " ")]
             }.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            parent.onSelect(names)
-            parent.dismiss()
+            Task { @MainActor in
+                parent.onSelect(names)
+                parent.dismiss()
+            }
         }
-        func contactPickerDidCancel(_ picker: CNContactPickerViewController) { parent.dismiss() }
+        nonisolated func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
+            Task { @MainActor in parent.dismiss() }
+        }
     }
 }
