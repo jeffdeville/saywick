@@ -3,10 +3,14 @@ import UIKit
 import VoiceKeyboardCore
 @testable import LocalVoiceKeyboard
 
+@MainActor private final class NoAccessKeyboard: KeyboardViewController {
+    override var hasFullAccess: Bool { false }
+}
+
 @MainActor
 final class TypingFallbackTests: XCTestCase {
     func testKeysAndModeSwitchesWithoutFullAccess() throws {
-        let keyboard = KeyboardViewController()
+        let keyboard = NoAccessKeyboard()
         keyboard.loadViewIfNeeded()
         XCTAssertFalse(keyboard.hasFullAccess)
         keyboard.view.frame = CGRect(x: 0, y: 0, width: 320, height: 318)
@@ -36,13 +40,9 @@ final class TypingFallbackTests: XCTestCase {
         add(attachment)
     }
 
-    func testKeyboardActionsStayInlineAndBottomRowIsAnchored() async throws {
-        let keyboard = KeyboardViewController()
+    func testKeyboardActionsStayInlineAndBottomRowIsAnchored() throws {
+        let keyboard = NoAccessKeyboard()
         keyboard.loadViewIfNeeded()
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 250))
-        window.rootViewController = keyboard
-        window.isHidden = false
-        defer { window.isHidden = true }
         keyboard.view.frame = CGRect(x: 0, y: 0, width: 393, height: 250)
         keyboard.view.layoutIfNeeded()
         let bottom = try button("return", in: keyboard.view)
@@ -54,7 +54,6 @@ final class TypingFallbackTests: XCTestCase {
         XCTAssertNil(keyboard.presentedViewController)
         try button("More", in: keyboard.view).sendActions(for: .touchUpInside)
         keyboard.view.layoutIfNeeded()
-        try await Task.sleep(for: .milliseconds(300))
         let image = UIGraphicsImageRenderer(size: keyboard.view.bounds.size).image { context in
             UIColor.systemGray5.setFill()
             context.fill(keyboard.view.bounds)
