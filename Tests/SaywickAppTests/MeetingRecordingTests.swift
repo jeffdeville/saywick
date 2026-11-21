@@ -28,25 +28,6 @@ final class MeetingRecordingTests: XCTestCase {
         XCTAssertEqual(entry.status, "Audio saved — transcribe with Parakeet")
     }
 
-    func testImportsRecordingLongerThanPreviousTwentyFiveMinuteLimit() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let source = root.appendingPathComponent("meeting.wav")
-        let destination = root.appendingPathComponent("normalized.wav")
-        // Low-rate silent PCM keeps this duration regression fixture compact.
-        let format = AVAudioFormat(standardFormatWithSampleRate: 8000, channels: 1)!
-        var file: AVAudioFile? = try AVAudioFile(forWriting: source, settings: format.settings)
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 8000)!
-        buffer.frameLength = 8000
-        memset(buffer.floatChannelData![0], 0, 8000 * MemoryLayout<Float>.size)
-        for _ in 0..<1800 { try file?.write(from: buffer) }
-        file = nil
-        try await AudioFileTranscriber.normalizedCopy(from: source, to: destination)
-        let imported = try AVAudioFile(forReading: destination)
-        XCTAssertEqual(Double(imported.length) / imported.processingFormat.sampleRate, 1800, accuracy: 1)
-    }
-
     func testRecordingShortcutsUseBackgroundSystemIntentProtocols() {
         func check<T: AudioRecordingIntent & LiveActivityIntent>(_ type: T.Type) {
             XCTAssertTrue(T.supportedModes.contains(.background))

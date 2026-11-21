@@ -1,31 +1,17 @@
 import SwiftUI
-import UniformTypeIdentifiers
 import VoiceKeyboardCore
 
 struct HistoryView: View {
     @Bindable var model: AppModel
     @State private var search = ""
-    @State private var importing = false
     @State private var deleting: TranscriptHistoryEntry?
-    @State private var deletingShared: URL?
     var body: some View {
         NavigationStack {
             List {
                 Text(model.history.message).font(.caption).accessibilityIdentifier("historyStatus")
                 if model.history.isWorking { Button("Cancel operation", role: .destructive) { model.history.cancelWork() } }
-                if !model.history.inbox.isEmpty {
-                    Section("Shared audio — waiting to import") {
-                        ForEach(model.history.inbox, id: \.self) { url in
-                            Button("Import shared \(url.pathExtension.uppercased()) recording") { model.history.importAudio(url, fromInbox: true) }
-                                .disabled(model.isBusy || model.history.isWorking)
-                                .swipeActions {
-                                    Button("Delete", role: .destructive) { deletingShared = url }.disabled(model.isBusy || model.history.isWorking)
-                                }
-                        }
-                    }
-                }
                 if model.history.entries.isEmpty {
-                    ContentUnavailableView("No recordings yet", systemImage: "waveform", description: Text("Dictate or import audio to save and transcribe it on device."))
+                    ContentUnavailableView("No recordings yet", systemImage: "waveform", description: Text("Start a dictation to see it here."))
                 }
                 ForEach(model.history.entries.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search)
                     || $0.runs.contains { $0.rawText.localizedCaseInsensitiveContains(search) || $0.finalText.localizedCaseInsensitiveContains(search) } }) { entry in
@@ -50,20 +36,11 @@ struct HistoryView: View {
                     Picker("Keep unpinned audio", selection: $model.history.audioDays) {
                         Text("1 day").tag(1); Text("7 days").tag(7); Text("30 days").tag(30); Text("Forever").tag(0)
                     }
-                    Text("Expiry is checked when History refreshes or Saywick starts. Pin entries to keep them. Turning audio off affects future dictations; imports retain audio. Clear resets active dictation, not saved history. Delete is permanent.").font(.caption)
+                    Text("Expiry is checked when History refreshes or Saywick starts. Pin entries to keep them. Turning audio off affects future dictations. Clear resets active dictation, not saved history. Delete is permanent.").font(.caption)
                 }.disabled(model.isBusy || model.history.isWorking)
             }
             .navigationTitle("History")
             .searchable(text: $search)
-            .toolbar {
-                Button("Import Audio", systemImage: "square.and.arrow.down") { importing = true }.disabled(model.isBusy || model.history.isWorking)
-            }
-            .fileImporter(isPresented: $importing, allowedContentTypes: [.audio]) { result in
-                switch result {
-                case .success(let url): model.history.importAudio(url)
-                case .failure(let error): model.history.message = error.localizedDescription
-                }
-            }
             .confirmationDialog("Permanently delete this recording and every comparison?", isPresented: Binding(
                 get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
                 Button("Delete recording and text", role: .destructive) {
@@ -71,12 +48,6 @@ struct HistoryView: View {
                 }
             }
             .onAppear { if !model.isBusy && !model.history.isWorking { model.history.reload() } }
-            .confirmationDialog("Permanently delete this queued audio file?", isPresented: Binding(
-                get: { deletingShared != nil }, set: { if !$0 { deletingShared = nil } })) {
-                Button("Delete shared audio", role: .destructive) {
-                    if let deletingShared { model.history.deleteSharedAudio(deletingShared) }; deletingShared = nil
-                }
-            }
         }
     }
 }

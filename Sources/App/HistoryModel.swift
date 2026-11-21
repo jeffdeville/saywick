@@ -7,7 +7,6 @@ import VoiceKeyboardCore
 @MainActor @Observable
 final class HistoryModel {
     var entries: [TranscriptHistoryEntry] = []
-    var inbox: [URL] = []
     var message = ""
     var isWorking = false
     var keepAudio: Bool {
@@ -41,7 +40,6 @@ final class HistoryModel {
         do {
             try store?.prune(textDays: textDays, audioDays: audioDays, excluding: activeID)
             entries = try store?.load() ?? []
-            inbox = (try? SharedAudioInbox.pending()) ?? []
         } catch { message = "History: \(error.localizedDescription)" }
     }
 
@@ -110,37 +108,6 @@ final class HistoryModel {
         } catch { message = error.localizedDescription }
     }
     func cancelWork() { work?.cancel(); message = "Cancelling…" }
-    func deleteSharedAudio(_ url: URL) {
-        guard !isWorking, activeID == nil, inbox.contains(url) else { return }
-        do { try FileManager.default.removeItem(at: url); reload(); message = "Shared audio deleted permanently." }
-        catch { message = error.localizedDescription }
-    }
-
-    func importAudio(_ source: URL, fromInbox: Bool = false) {
-        guard !isWorking, activeID == nil, let store else { return }
-        isWorking = true; message = "Importing audio locally…"
-        work = Task { @MainActor in
-            defer { isWorking = false; work = nil }
-            let access = source.startAccessingSecurityScopedResource()
-            defer { if access { source.stopAccessingSecurityScopedResource() } }
-            var entry = TranscriptHistoryEntry(title: source.deletingPathExtension().lastPathComponent, source: "Imported audio", hasAudio: true, status: "Imported — ready for Parakeet")
-            do {
-                try await AudioFileTranscriber.normalizedCopy(from: source, to: store.audioURL(entry.id))
-                try Task.checkCancellation()
-                entry.hasAudio = true
-                try store.save(entry); reload()
-                if fromInbox, inbox.contains(source) {
-                    try? FileManager.default.removeItem(at: source)
-                    reload()
-                }
-                message = "Imported locally. Open the recording and tap Transcribe with Parakeet."
-            } catch {
-                try? store.deleteAudio(entry.id)
-                message = error is CancellationError ? "Import cancelled" : error.localizedDescription
-            }
-        }
-    }
-
     func compare(_ entry: TranscriptHistoryEntry, engine: SpeechEngineID, cleanup: PostProcessorID,
                  instructions: String, vocabulary: String, reprocess: TranscriptRun? = nil) {
         guard !isWorking, activeID == nil else { return }
