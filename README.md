@@ -42,14 +42,14 @@ command-line benchmarks only; the iOS app has no provider client or upload path.
 History lives in Application Support, excluded from backups, with iOS file
 protection available after first unlock so background dictation can write safely.
 Retained audio is a normalized recording, not necessarily the source file's original
-encoding. Imports keep audio even when microphone retention is disabled. Retention
+encoding. Retention
 is enforced when History refreshes or the app starts, not by a guaranteed background
 timer. Turning retention off only affects future microphone recordings.
 
 Clear/Restart discards the current dictation's text/audio; insertion clears the
 active keyboard session but leaves its saved history. Deleting a history entry
 permanently removes its text and audio; Delete Audio Only preserves comparisons.
-Shared audio waits locally in the App Group inbox until imported. Exported files
+Exported files
 and copies shared to other apps are outside history's deletion/retention policy.
 Keep only recordings you have permission to store or send to a provider.
 
@@ -64,7 +64,7 @@ Keep only recordings you have permission to store or send to a provider.
 4. Run `xcodegen generate`, open `LocalVoiceKeyboard.xcodeproj`, and select the
    `LocalVoiceKeyboard` scheme. Those internal names remain for upgrade compatibility.
 5. Connect/unlock your iPhone, trust the Mac, enable Developer Mode if prompted,
-   and Run. Automatic signing applies to the app, keyboard, share extension, and widget.
+   and Run. Automatic signing applies to the app, keyboard, and widget.
 6. Open Saywick and grant microphone access. Add the Saywick keyboard under
    Settings > General > Keyboard > Keyboards, and enable Full Access for the bridge.
 
@@ -132,20 +132,14 @@ permission already granted and a successfully created Live Activity. Failed star
 surface a Shortcut error and release audio resources. A recording is never resumed
 automatically after a process termination or interruption.
 
-## Saved recordings and imports
+## Saved recordings
 
-Audio import remains in this checkout and is approved for removal.
+Recordings imported by earlier versions remain available in History under the usual retention settings.
 
 Open History > a recording to play audio, copy text, restore text to the keyboard,
 or **Transcribe with Parakeet**. Each run preserves earlier results and settings.
 **Reprocess original** applies current local cleanup and custom words without
 transcribing again. Existing recordings from retired engines remain readable.
-
-Use History > Import Audio, or share rendered audio from Voice Memos to Saywick.
-The Share extension queues audio locally; import it from Shared Audio in History.
-Imports retain audio regardless of the microphone retention preference. Files must
-be readable, nonempty, and no longer than four hours; shared files are limited to
-1 GB. Speaker diarization remains outside the current scope.
 
 ## Final text cleanup
 

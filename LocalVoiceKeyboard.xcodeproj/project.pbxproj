@@ -32,12 +32,9 @@
 		4D165FB9CB82F2504DA01D56 /* AudioCaptureTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDA4809DB9A06E5D32600CA6 /* AudioCaptureTap.swift */; };
 		4D18C4A49C0CF282F1EB7935 /* Parakeet-Licenses.txt in Resources */ = {isa = PBXBuildFile; fileRef = 704AC1AF2EF6CE9A185772E1 /* Parakeet-Licenses.txt */; };
 		50E49238DDC8AD63B5876D67 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16F48D0C066B778C0A1EBB5B /* ContentView.swift */; };
-		5124B18649C07B3A22B4FCA2 /* SharedAudioInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355C6F297E1E8BB9AA72C488 /* SharedAudioInbox.swift */; };
 		5B18FC9BD01C6B7F2982CF4C /* VoiceKeyboardCore in Frameworks */ = {isa = PBXBuildFile; productRef = ADD1935DA754A8AA5761ECFF /* VoiceKeyboardCore */; };
 		5F2C4DF5710B6DC337349F11 /* TranscriptPostProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BB5955F4FF7F4A75BADEFAF /* TranscriptPostProcessor.swift */; };
-		61AA3CC3A00DED11C9B771C7 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF09A0C5E0CA1FC1C461FBFF /* ShareViewController.swift */; };
 		651004C87D822D55D97A5105 /* LocalVoice.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BE99E44F562EA8A68DE1AC4D /* LocalVoice.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		66FC9039525129C9F3212D4B /* SharedAudioInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355C6F297E1E8BB9AA72C488 /* SharedAudioInbox.swift */; };
 		6706EF0EC463D43A1A631470 /* BackgroundRecordingDeviceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 199849C2AF9553890743F106 /* BackgroundRecordingDeviceTests.swift */; };
 		71BA49CA6EFF0834F4F19990 /* AudioArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2002FD6FF9430DA963512EE /* AudioArchive.swift */; };
 		760162998AD5E373B477DAA9 /* SharedContainerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFB9DD2854EC941D0FD6556 /* SharedContainerStore.swift */; };
@@ -46,7 +43,6 @@
 		82DA62B4717B2E5D679DF167 /* TranscriptPostProcessorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812563D6E2FCC95341505E58 /* TranscriptPostProcessorTests.swift */; };
 		86B6B99D9FC3D4C395A09E16 /* TypingFallbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 539F6A5C62F87EE13BD3EB27 /* TypingFallbackTests.swift */; };
 		881D5343202FC130F7F0D8D3 /* SaywickShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE122408C8E17FD744FA4E57 /* SaywickShortcuts.swift */; };
-		8E10096494BA48F5BFB7DCD7 /* SaywickShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 425316548774BDB922FA1438 /* SaywickShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		94D52ADC7006AE5BA2F1AF69 /* AudioFileTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AA3949B1A9D890342FFC152 /* AudioFileTranscriber.swift */; };
 		99093EA3411FE3634DBEEC98 /* AudioBufferConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD68DE3033ED8394CD2AD1F0 /* AudioBufferConverter.swift */; };
 		9AA084E0B0CB5EF5007E89FB /* StopSaywickRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0186AB2B51E0412EC2AC97B0 /* StopSaywickRecording.swift */; };
@@ -54,7 +50,6 @@
 		B631BBA6A6E6BA5E9928C5B5 /* StopSaywickRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0186AB2B51E0412EC2AC97B0 /* StopSaywickRecording.swift */; };
 		BDCA94084357E2D17993FE0D /* SaywickActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24359AF657262E1272CED75 /* SaywickActivityAttributes.swift */; };
 		BE8C8B3E860E6AEAD9224972 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6FFDEC692C39DA0A5B8933F6 /* Assets.xcassets */; };
-		C12CB502980D067A2CBD3AA9 /* SharedAudioInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355C6F297E1E8BB9AA72C488 /* SharedAudioInbox.swift */; };
 		C1CB30EE5AB2A6071D0F5D45 /* SimulatorSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AB6CB5EA2C7907F47149BFF /* SimulatorSpeechEngine.swift */; };
 		CA43F52962D0BA6D9A86BAD7 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 758EAF0B3DA0081B8DC21E90 /* HistoryView.swift */; };
 		D421BF6B529B93158F38774F /* SharedContainerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFB9DD2854EC941D0FD6556 /* SharedContainerStore.swift */; };
@@ -71,13 +66,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 93E2176797081E948CCE463F;
 			remoteInfo = LocalVoiceKeyboardExtension;
-		};
-		6DAD5102EA24A3BF498A0EDC /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D9E1F69A3B09C6A606D20B84 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = B1A8F5427508B0B1386238A0;
-			remoteInfo = SaywickShare;
 		};
 		A8D2F38A9C2BA90B51519E64 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -110,7 +98,6 @@
 			dstSubfolderSpec = 13;
 			files = (
 				651004C87D822D55D97A5105 /* LocalVoice.appex in Embed Foundation Extensions */,
-				8E10096494BA48F5BFB7DCD7 /* SaywickShare.appex in Embed Foundation Extensions */,
 				F63B537D03A0C9351FBD1969 /* SaywickStatus.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
@@ -131,13 +118,12 @@
 		25E51046EC6AFC5FBD2BD9D7 /* KeyboardHandoffDeviceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardHandoffDeviceTests.swift; sourceTree = "<group>"; };
 		2938A16A02555A1EBA32957F /* ParakeetSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetSpeechEngine.swift; sourceTree = "<group>"; };
 		32DC307396E107EBAE888CC2 /* LiveSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveSpeechEngine.swift; sourceTree = "<group>"; };
-		355C6F297E1E8BB9AA72C488 /* SharedAudioInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedAudioInbox.swift; sourceTree = "<group>"; };
 		357D0D7F51DDEDA52F06CED6 /* SaywickStatus.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = SaywickStatus.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		38AA830E18686A3328246E89 /* ContactWordsPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactWordsPicker.swift; sourceTree = "<group>"; };
+		3B37B5BDB97A348F52F4E6A7 /* saywick-charter-pr.qnhhWV */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "saywick-charter-pr.qnhhWV"; path = .; sourceTree = SOURCE_ROOT; };
 		3EC1322D5448A00A21CB2B14 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
 		3F9B530E91C5CD159422B6C4 /* AudioCaptureTapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureTapTests.swift; sourceTree = "<group>"; };
 		423A1BEFE01B282A932C34FD /* LocalVoiceKeyboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalVoiceKeyboardApp.swift; sourceTree = "<group>"; };
-		425316548774BDB922FA1438 /* SaywickShare.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = SaywickShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		42D533136756B5A1E77668B7 /* LocalVoiceKeyboardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalVoiceKeyboardUITests.swift; sourceTree = "<group>"; };
 		464B1A272E043D1D8D291747 /* SaywickAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SaywickAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AB6CB5EA2C7907F47149BFF /* SimulatorSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorSpeechEngine.swift; sourceTree = "<group>"; };
@@ -152,10 +138,8 @@
 		758EAF0B3DA0081B8DC21E90 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		812563D6E2FCC95341505E58 /* TranscriptPostProcessorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptPostProcessorTests.swift; sourceTree = "<group>"; };
 		911EA690314F97FEDF3630FA /* LocalVoiceKeyboard.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LocalVoiceKeyboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		9CEA115C0BBB7DE079C4F0AE /* ios_kb */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ios_kb; path = .; sourceTree = SOURCE_ROOT; };
 		A63E669DBA875ACF94AF0347 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		BE99E44F562EA8A68DE1AC4D /* LocalVoice.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = LocalVoice.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		BF09A0C5E0CA1FC1C461FBFF /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		C097089A6D12A9A00ADBA05B /* AudioArchiveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioArchiveTests.swift; sourceTree = "<group>"; };
 		C977FD7DD5A86D74021B093C /* ParakeetModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetModelStore.swift; sourceTree = "<group>"; };
 		CD68DE3033ED8394CD2AD1F0 /* AudioBufferConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBufferConverter.swift; sourceTree = "<group>"; };
@@ -222,7 +206,7 @@
 		2AFE53150E91F3DDB3A36A76 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				9CEA115C0BBB7DE079C4F0AE /* ios_kb */,
+				3B37B5BDB97A348F52F4E6A7 /* saywick-charter-pr.qnhhWV */,
 				714B693063382E4084306A08 /* SwiftPackage */,
 			);
 			name = Packages;
@@ -250,7 +234,6 @@
 			isa = PBXGroup;
 			children = (
 				D24359AF657262E1272CED75 /* SaywickActivityAttributes.swift */,
-				355C6F297E1E8BB9AA72C488 /* SharedAudioInbox.swift */,
 				4FFB9DD2854EC941D0FD6556 /* SharedContainerStore.swift */,
 				0186AB2B51E0412EC2AC97B0 /* StopSaywickRecording.swift */,
 			);
@@ -265,7 +248,6 @@
 				911EA690314F97FEDF3630FA /* LocalVoiceKeyboard.app */,
 				ECD3D267257E9E9F2AA68585 /* LocalVoiceKeyboardUITests.xctest */,
 				464B1A272E043D1D8D291747 /* SaywickAppTests.xctest */,
-				425316548774BDB922FA1438 /* SaywickShare.appex */,
 				357D0D7F51DDEDA52F06CED6 /* SaywickStatus.appex */,
 			);
 			name = Products;
@@ -277,15 +259,6 @@
 				704AC1AF2EF6CE9A185772E1 /* Parakeet-Licenses.txt */,
 			);
 			path = Resources;
-			sourceTree = "<group>";
-		};
-		50477A53F563DDE66FC9BC3E /* ShareExtension */ = {
-			isa = PBXGroup;
-			children = (
-				BF09A0C5E0CA1FC1C461FBFF /* ShareViewController.swift */,
-			);
-			name = ShareExtension;
-			path = Sources/ShareExtension;
 			sourceTree = "<group>";
 		};
 		5FCE9DB949D586ADFC909E9C /* PostProcessing */ = {
@@ -344,7 +317,6 @@
 				2AFE53150E91F3DDB3A36A76 /* Packages */,
 				FC8B130F58C6BC35F6610181 /* SaywickAppTests */,
 				3B8C5252959D02FEB5010AE9 /* Shared */,
-				50477A53F563DDE66FC9BC3E /* ShareExtension */,
 				053F484A2BECDAB9BF1067B2 /* StatusWidget */,
 				3F3215FE98687184691F05BC /* Products */,
 			);
@@ -399,7 +371,6 @@
 			);
 			dependencies = (
 				5E18F0EE41344AA331D9A5AB /* PBXTargetDependency */,
-				D3E7F38BF9C093EA9C868EA1 /* PBXTargetDependency */,
 				778E57D79822638A720B0A59 /* PBXTargetDependency */,
 			);
 			name = LocalVoiceKeyboard;
@@ -465,23 +436,6 @@
 			productReference = ECD3D267257E9E9F2AA68585 /* LocalVoiceKeyboardUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		B1A8F5427508B0B1386238A0 /* SaywickShare */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = E90733C033196DA05B3E75CA /* Build configuration list for PBXNativeTarget "SaywickShare" */;
-			buildPhases = (
-				F8F591A8DA75766A49C18D23 /* Sources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = SaywickShare;
-			packageProductDependencies = (
-			);
-			productName = SaywickShare;
-			productReference = 425316548774BDB922FA1438 /* SaywickShare.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -514,10 +468,6 @@
 						ProvisioningStyle = Automatic;
 						TestTargetID = 5020AFFF60B5BE4009505F87;
 					};
-					B1A8F5427508B0B1386238A0 = {
-						DevelopmentTeam = "";
-						ProvisioningStyle = Automatic;
-					};
 				};
 			};
 			buildConfigurationList = 03734D6A07D9C75808D16C3F /* Build configuration list for PBXProject "LocalVoiceKeyboard" */;
@@ -540,7 +490,6 @@
 			targets = (
 				5020AFFF60B5BE4009505F87 /* LocalVoiceKeyboard */,
 				93E2176797081E948CCE463F /* LocalVoiceKeyboardExtension */,
-				B1A8F5427508B0B1386238A0 /* SaywickShare */,
 				72F7BEC905982E497B096DB3 /* SaywickStatus */,
 				2A26347C8CE8911ED5C25B23 /* SaywickAppTests */,
 				A5A0F1E617B1FD96B69B00F8 /* LocalVoiceKeyboardUITests */,
@@ -611,7 +560,6 @@
 				8275C244C9A0569950349B9B /* RecordingActivity.swift in Sources */,
 				17A9F745CBBE4E208388224D /* SaywickActivityAttributes.swift in Sources */,
 				881D5343202FC130F7F0D8D3 /* SaywickShortcuts.swift in Sources */,
-				C12CB502980D067A2CBD3AA9 /* SharedAudioInbox.swift in Sources */,
 				070C1FF7FAB9E1601A013A8D /* SharedContainerStore.swift in Sources */,
 				C1CB30EE5AB2A6071D0F5D45 /* SimulatorSpeechEngine.swift in Sources */,
 				B631BBA6A6E6BA5E9928C5B5 /* StopSaywickRecording.swift in Sources */,
@@ -625,7 +573,6 @@
 			files = (
 				42C0D4CF1D34230AF6185719 /* KeyboardViewController.swift in Sources */,
 				1F55595D4FC78BA27DD63183 /* SaywickActivityAttributes.swift in Sources */,
-				66FC9039525129C9F3212D4B /* SharedAudioInbox.swift in Sources */,
 				D421BF6B529B93158F38774F /* SharedContainerStore.swift in Sources */,
 				1F55FB21495EA9918DDBE8E9 /* StopSaywickRecording.swift in Sources */,
 			);
@@ -638,15 +585,6 @@
 				6706EF0EC463D43A1A631470 /* BackgroundRecordingDeviceTests.swift in Sources */,
 				B54D5E208DDC5BBFBAC701DE /* KeyboardHandoffDeviceTests.swift in Sources */,
 				E61F2ED22F046885B833256A /* LocalVoiceKeyboardUITests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		F8F591A8DA75766A49C18D23 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				61AA3CC3A00DED11C9B771C7 /* ShareViewController.swift in Sources */,
-				5124B18649C07B3A22B4FCA2 /* SharedAudioInbox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -667,11 +605,6 @@
 			isa = PBXTargetDependency;
 			target = 5020AFFF60B5BE4009505F87 /* LocalVoiceKeyboard */;
 			targetProxy = D2A41F99BF891BF4E8263342 /* PBXContainerItemProxy */;
-		};
-		D3E7F38BF9C093EA9C868EA1 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = B1A8F5427508B0B1386238A0 /* SaywickShare */;
-			targetProxy = 6DAD5102EA24A3BF498A0EDC /* PBXContainerItemProxy */;
 		};
 		F4D5DCE4817C315F85097FF7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -781,22 +714,6 @@
 			};
 			name = Debug;
 		};
-		76719C9E9B947533483182A0 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Config/ShareExtension.entitlements;
-				INFOPLIST_FILE = "Config/ShareExtension-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).app.share";
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
 		852B40ECAC11D2621A2DBF11 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -887,22 +804,6 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		C07D002CAE59D76EB87E32CF /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Config/ShareExtension.entitlements;
-				INFOPLIST_FILE = "Config/ShareExtension-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).app.share";
-				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -1059,15 +960,6 @@
 			buildConfigurations = (
 				8EFC2B27B49F8E09E8ABA84C /* Debug */,
 				D0AA0995F3D41C62068D0951 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		E90733C033196DA05B3E75CA /* Build configuration list for PBXNativeTarget "SaywickShare" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				76719C9E9B947533483182A0 /* Debug */,
-				C07D002CAE59D76EB87E32CF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

@@ -396,13 +396,8 @@ final class AppModel {
     }
 
     func handleOpenURL(_ url: URL) async {
-        await startServices()
-        if url.isFileURL {
-            ActivationDiagnostics.shared.record("Audio file opened")
-            guard !isBusy else { return }
-            selectedTab = 1; history.importAudio(url); return
-        }
         guard url.scheme == "localvoicekeyboard" || url.scheme == "saywick" else { return }
+        await startServices()
         let source = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "source" }?.value
         switch source {
         case "keyboard": ActivationDiagnostics.shared.record("Recorder URL received from keyboard link")
